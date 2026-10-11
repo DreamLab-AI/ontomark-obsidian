@@ -93,11 +93,9 @@ npm run test:offline   # installs dist/ into a scratch vault, runs the end-to-en
 
 `npm run test:offline` copies `dist/` into `<scratch vault>/.obsidian/plugins/ontomark/`, streams the vault and the driver into a `node` container started with `--network none`, and evaluates the installed `main.js` the way Obsidian loads a plugin. It indexes, classifies, queries (through the query view), proposes and applies a patch through the diff modal, refuses a patch whose file changed after the preview, follows delete and rename events, switches profile, unloads (worker terminated, listeners and views gone) and reloads. A tripwire records any socket, DNS, HTTP, fetch, XHR or WebSocket use in the main and worker threads; the run fails on any.
 
-It runs against `test/e2e/obsidian-shim.cjs`, a filesystem-backed stand-in for the Obsidian API calls the plugin uses, and a `worker_threads` worker that accepts the plugin's Blob URL. It is not Obsidian. The following also require an installed Obsidian desktop acceptance run:
+It runs against `test/e2e/obsidian-shim.cjs`, a filesystem-backed stand-in for the Obsidian API calls the plugin uses, and a `worker_threads` worker that accepts the plugin's Blob URL. It is not Obsidian. An installed Obsidian 1.14.4 acceptance run also passed on Linux in the browser sidecar: the Blob worker compiled the embedded module, indexed 13 synthetic notes, classified them, rendered diagnostic and inferred-parent panels, returned seven SPARQL rows, applied a reviewed frontmatter edit without changing its body, refused a concurrent edit through real `vault.process`, and unloaded/reloaded into a fresh working engine. No browser console errors or warnings were observed. This covers that desktop version and synthetic fixture; mobile and broad desktop compatibility remain untested.
 
-1. The Blob-URL worker starts in Electron's renderer and `initSync` compiles the embedded module there.
-2. `vault.process` refuses to write when the callback throws (the shim implements the documented contract).
-3. The panel, query view, diff modal and settings render and respond as intended (layout, styling, keyboard).
+See [desktop acceptance evidence](docs/desktop-acceptance.md) for the checks and their scope.
 
 ## Licence
 
