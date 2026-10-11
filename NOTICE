@@ -1,0 +1,12 @@
+
+## Relicensing grant (2026-10-11)
+
+Code in this repository ported from the following DreamLab-AI repositories was
+originally published under AGPL-3.0 (VisionClaw crates `vault`, `vault-core`,
+`visionclaw-domain::vault`) or AGPL-3.0-or-later (knowledgeGraph `pipeline/`).
+Those works were authored solely by DreamLab-AI and its agents under the
+direction of Dr John O'Hare, who holds the copyright and grants their reuse here
+under MIT OR Apache-2.0. The grant does not cover, and this repository must not
+contain, code derived from the solid-pod or sidestr lineages or from
+`vault/src/nostr.rs` and its governance posting, which remain AGPL-3.0-only in
+VisionClaw.

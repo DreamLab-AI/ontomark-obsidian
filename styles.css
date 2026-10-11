@@ -1,0 +1,27 @@
+.ontomark-view { padding: var(--size-4-3); }
+.ontomark-header { border-bottom: 1px solid var(--background-modifier-border); padding-bottom: var(--size-4-2); margin-bottom: var(--size-4-2); }
+.ontomark-status, .ontomark-progress, .ontomark-help, .ontomark-count, .ontomark-plain, .ontomark-empty, .ontomark-parents { color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.ontomark-warning { color: var(--color-red); font-size: var(--font-ui-small); margin: var(--size-4-1) 0; }
+.ontomark-error { color: var(--color-red); }
+.ontomark-actions { display: flex; gap: var(--size-4-2); margin: var(--size-4-2) 0; }
+.ontomark-section-title { margin: var(--size-4-3) 0 var(--size-4-1); }
+.ontomark-item { padding: 2px 0; }
+.ontomark-link { cursor: pointer; color: var(--text-accent); }
+.ontomark-link:hover { text-decoration: underline; }
+.ontomark-inferred { margin-left: var(--size-4-4); color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.ontomark-badge { border: 1px solid var(--background-modifier-border); border-radius: var(--radius-s); padding: 0 var(--size-4-1); margin-left: var(--size-4-1); font-size: var(--font-ui-smaller); }
+.ontomark-badge-inferred { color: var(--color-green); }
+.ontomark-badge-unsat { color: var(--color-red); }
+.ontomark-diagnostic { font-size: var(--font-ui-smaller); }
+.ontomark-error.ontomark-diagnostic, .ontomark-diagnostic.ontomark-error { color: var(--color-red); }
+.ontomark-warning.ontomark-diagnostic { color: var(--text-muted); }
+.ontomark-query-input { width: 100%; font-family: var(--font-monospace); font-size: var(--font-ui-smaller); resize: vertical; }
+.ontomark-ask { font-weight: var(--font-bold); }
+.ontomark-table { border-collapse: collapse; width: 100%; margin-top: var(--size-4-2); }
+.ontomark-table th, .ontomark-table td { border: 1px solid var(--background-modifier-border); padding: 2px var(--size-4-2); text-align: left; font-size: var(--font-ui-smaller); }
+.ontomark-diff { white-space: pre-wrap; border: 1px solid var(--background-modifier-border); padding: var(--size-4-2); max-height: 50vh; overflow: auto; font-family: var(--font-monospace); font-size: var(--font-ui-smaller); }
+.ontomark-diff-add { color: var(--color-green); display: block; }
+.ontomark-diff-del { color: var(--color-red); display: block; }
+.ontomark-diff-hunk { color: var(--text-muted); display: block; }
+.ontomark-diff-ctx { display: block; }
+.ontomark-diff-buttons { display: flex; justify-content: flex-end; gap: var(--size-4-2); margin-top: var(--size-4-3); }

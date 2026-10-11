@@ -1,0 +1,24 @@
+{
+  "name": "ontomark-obsidian",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ontologies in Markdown for Obsidian: local index, reasoning, SPARQL and guarded frontmatter edits",
+  "license": "MIT OR Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "wasm": "node scripts/build-wasm.mjs",
+    "build": "node scripts/build-wasm.mjs && tsc --noEmit -p . && node esbuild.config.mjs production",
+    "dev": "node esbuild.config.mjs",
+    "test": "vitest run",
+    "test:wasm": "node --test test/wasm-harness.test.mjs",
+    "test:offline": "node scripts/offline-test.mjs",
+    "check:bundle": "node scripts/check-bundle.mjs dist/main.js"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "esbuild": "0.28.2",
+    "obsidian": "1.13.1",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  }
+}
