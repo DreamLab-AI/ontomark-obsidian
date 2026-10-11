@@ -4,6 +4,22 @@
 
 Ontomark treats typed Markdown pages as an ontology. Pages whose frontmatter declares a `type` become classes, individuals or properties; the plugin indexes them, runs a local reasoner, answers SPARQL queries and proposes reviewed frontmatter edits. It needs no special vault layout or prior knowledge of any particular corpus.
 
+## Screenshots
+
+Captured from the installed plugin in Obsidian 1.14.4 on Linux, using a synthetic vault.
+
+The explorable ontology graph shows asserted and inferred edges, search and neighbourhood controls.
+
+![Ontomark ontology graph in Obsidian](docs/screenshots/graph.png)
+
+The ontology panel lists entities, inferred parents and classification diagnostics.
+
+![Ontomark ontology panel in Obsidian](docs/screenshots/ontology-panel.png)
+
+SPARQL runs over the local dataset and displays query results.
+
+![Ontomark SPARQL query and results in Obsidian](docs/screenshots/sparql.png)
+
 ## Install
 
 This repository contains the Obsidian plugin. The portable Rust engine is maintained separately in [Ontomark](https://github.com/DreamLab-AI/ontomark). You do not need the other DreamLab repositories to install or build the plugin.

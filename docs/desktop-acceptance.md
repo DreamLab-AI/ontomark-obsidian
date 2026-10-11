@@ -33,3 +33,5 @@ The graph consumer pins `@dreamlab-ai/ontomark-graph` 0.1.0 from the immutable O
 | Console | No errors or warnings during the tested operations. |
 
 [Raw graph receipt](evidence/desktop-graph-acceptance.log) and [screenshot](evidence/desktop-graph.png) record the scratch vault. [Red keyboard witness](evidence/desktop-graph-arrowleft-red.log) demonstrates the selection defect before its fix. This is runtime evidence for this synthetic fixture, separate from the network-isolated shim.
+
+The [README screenshots](screenshots/README.md) were captured from the installed plugin, with the sidebar collapsed to show each view clearly. Production npm audit reports zero findings; build dependencies retain two moderate advisories through the Obsidian development SDK. These are separate from the installed bundle, and an independent security-agent review was unavailable.
