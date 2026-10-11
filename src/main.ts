@@ -10,9 +10,10 @@ import { DEFAULT_SETTINGS, OntomarkSettingTab } from "./settings";
 import type { OntomarkSettings } from "./settings";
 import { ENTITY_VIEW, EntityView } from "./views/entity-view";
 import { QUERY_VIEW, QueryView } from "./views/query-view";
+import { GRAPH_VIEW, GraphView } from "./views/graph-view";
 import { confirmWithDiff } from "./views/diff-modal";
 
-export { ENTITY_VIEW, QUERY_VIEW };
+export { ENTITY_VIEW, QUERY_VIEW, GRAPH_VIEW };
 export type { OntomarkSettings };
 
 const QUIET_CODES = new Set(["stale", "cancelled", "superseded", "dead_epoch", "worker_restarted", "disposed"]);
@@ -75,8 +76,9 @@ export default class OntomarkPlugin extends Plugin {
     this.addSettingTab(new OntomarkSettingTab(this.app, this));
     this.registerView(ENTITY_VIEW, (leaf) => new EntityView(leaf, this));
     this.registerView(QUERY_VIEW, (leaf) => new QueryView(leaf, this));
+    this.registerView(GRAPH_VIEW, (leaf) => new GraphView(leaf, this));
     this.addRibbonIcon("network", "Open ontology panel", () => {
-      void this.openEntityView();
+      void this.openGraphView();
     });
 
     // Obsidian fires `create` for every file while the vault loads; the initial
@@ -125,6 +127,10 @@ export default class OntomarkPlugin extends Plugin {
 
   async openEntityView(): Promise<void> {
     await this.openView(ENTITY_VIEW);
+  }
+
+  async openGraphView(): Promise<void> {
+    await this.openView(GRAPH_VIEW);
   }
 
   async openQueryView(): Promise<void> {
@@ -285,6 +291,7 @@ export default class OntomarkPlugin extends Plugin {
   }
 
   private registerCommands(): void {
+    this.addCommand({ id: "open-graph", name: "Open ontology graph", callback: () => void this.openGraphView() });
     this.addCommand({ id: "open-panel", name: "Open ontology panel", callback: () => void this.openEntityView() });
     this.addCommand({ id: "open-query", name: "Open SPARQL query", callback: () => void this.openQueryView() });
     this.addCommand({ id: "classify-now", name: "Classify now", callback: () => void this.runClassify() });

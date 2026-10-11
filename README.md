@@ -36,7 +36,7 @@ subclass-of: ["[[Animal]]"]
 ---
 ```
 
-Open the panel with the ribbon icon or the "Open ontology panel" command. Both pages appear under Classes, and Dog lists Animal as its parent. Run "Classify now" to add inferred superclasses.
+Open the graph with the ribbon icon or "Open ontology graph". Use "Open ontology panel" for the class list. Both pages appear under Classes, and Dog lists Animal as its parent. Run "Classify now" to add inferred superclasses.
 
 ## Generic profile keys
 
@@ -58,6 +58,7 @@ Any other frontmatter key becomes an annotation. Wikilinks in prose are never ax
 
 ## Features
 
+- **Explorable graph**: pan, zoom, search, select, focus on a neighbourhood and open notes. Asserted edges are solid and inferred edges dashed. Circles, squares and diamonds distinguish classes, individuals and properties. Run Classify to add inference; incomplete classification is shown. Both this plugin and Narrative Goldmine use [Ontomark’s shared graph package](https://github.com/DreamLab-AI/ontomark/tree/main/packages/graph).
 - **Panel**: classes, individuals and properties with their told parents, inferred superclasses (badged), unsatisfiable classes, diagnostics and a count of plain notes.
 - **Reasoning**: classification runs locally, in a background worker, and is cancelled by any edit.
 - **SPARQL view**: SELECT, ASK and CONSTRUCT over the asserted, inferred or combined dataset.
@@ -86,6 +87,7 @@ The "Estate corpus profile" (Settings, Ontomark, Profile) reads corpora that use
 Needs Node 22 or later. The build fetches the versioned Ontomark WASM engine and verifies its pinned SHA-256; no Rust toolchain is needed. Note that `npm install` must include dev dependencies (`npm install --include=dev` if your npm config omits them).
 
 ```
+npm ci --include=dev   # install the locked build dependencies
 npm run build          # wasm, type-check, production bundle into dist/
 npm run check:bundle   # static check of dist/main.js: no network API, engine embedded
 npm test               # Vitest: generation guard and worker protocol over the real engine
@@ -103,4 +105,4 @@ See [desktop acceptance evidence](docs/desktop-acceptance.md) for the checks and
 
 ## Licence
 
-MIT OR Apache-2.0.
+MIT OR Apache-2.0. The ZIP includes [third-party notices](THIRD-PARTY-NOTICES.md). [Upstream credits and source repositories](https://github.com/DreamLab-AI/ontomark/blob/main/docs/UPSTREAMS.md) include Whelk/Whelk-rs, Oxigraph, wasm-bindgen and their dependencies. See [graph ownership](docs/adr/ADR-OBS-001-shared-graph.md) for the core/plugin boundary.

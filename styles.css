@@ -25,3 +25,12 @@
 .ontomark-diff-hunk { color: var(--text-muted); display: block; }
 .ontomark-diff-ctx { display: block; }
 .ontomark-diff-buttons { display: flex; justify-content: flex-end; gap: var(--size-4-2); margin-top: var(--size-4-3); }
+
+.ontomark-graph-view {display:flex;flex-direction:column;gap:8px;height:100%;padding:12px;}
+.ontomark-graph-view > .ontomark-actions {flex-wrap:wrap;align-items:center;flex-shrink:0;}
+.ontomark-graph-view > .ontomark-actions label {display:flex;align-items:center;gap:4px;}
+.ontomark-graph-surface {flex:1;min-height:300px;border:1px solid var(--background-modifier-border);border-radius:6px;}
+.ontomark-graph-node-list {display:flex;flex-wrap:wrap;gap:4px;max-height:110px;overflow:auto;}
+.ontomark-graph-details {display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.ontomark-graph-details code {font-size:11px;overflow-wrap:anywhere;}
+.ontomark-graph-search {width:100%;}

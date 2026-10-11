@@ -1,0 +1,14 @@
+(node:1747752) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Update available: 1.6.0 -> 1.10.1
+Run `npm install chrome-devtools-mcp@latest` to update.
+
+turning off usage statistics. process.env['CI'] || process.env['CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS'] is set.
+chrome-devtools-mcp exposes content of the browser instance to the MCP clients allowing them to inspect,
+debug, and modify any data in the browser or DevTools.
+Avoid sharing sensitive or personal information that you do not want to share with MCP clients.
+Performance tools may send trace URLs to the Google CrUX API to fetch real-user experience data. To disable, run with --no-performance-crux.
+[chrome-devtools-mcp] The connecting client did not negotiate the MCP roots capability. File-writing tools will be restricted to the OS temp directory. To restore the previous unrestricted behavior, start the server with --allow-unrestricted-paths.
+select_page [{"type":"text","text":"## Pages\n1: Settings - ontomark-validation-vault - Obsidian... (about:blank)\n2: New tab - ontomark-validation-vault - Obsidian ... (app://obsidian.md/index.html) [selected]"}]
+evaluate_script [{"type":"text","text":"Error: ArrowLeft from no selection: urn:ontomark:page:People/Rex expected urn:ontomark:page:Welcome"}]

@@ -10,3 +10,11 @@ under MIT OR Apache-2.0. The grant does not cover, and this repository must not
 contain, code derived from the solid-pod or sidestr lineages or from
 `vault/src/nostr.rs` and its governance posting, which remain AGPL-3.0-only in
 VisionClaw.
+
+## Runtime components
+
+This distribution bundles Ontomark’s WASM engine and shared graph renderer.
+Whelk/Whelk-rs and Oxigraph attribution and complete dependency licence texts
+are preserved in THIRD-PARTY-NOTICES.md. The shared graph adapts Narrative
+Goldmine behaviour: https://github.com/jjohare/visionGraph .
+Sources: https://github.com/DreamLab-AI/ontomark

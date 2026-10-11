@@ -15,4 +15,4 @@ jobs:
       - run: npm run package
       - name: Publish installable plugin files
         env: {GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'}
-        run: gh release create "$GITHUB_REF_NAME" dist/main.js dist/manifest.json dist/styles.css release/*.zip release/*.sha256 --verify-tag --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" dist/main.js dist/manifest.json dist/styles.css LICENSE-MIT LICENSE-APACHE NOTICE THIRD-PARTY-NOTICES.md release/*.zip release/*.sha256 --verify-tag --generate-notes
