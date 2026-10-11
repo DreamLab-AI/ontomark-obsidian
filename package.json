@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:wasm": "node --test test/wasm-harness.test.mjs",
     "test:offline": "node scripts/offline-test.mjs",
-    "check:bundle": "node scripts/check-bundle.mjs dist/main.js"
+    "check:bundle": "node scripts/check-bundle.mjs dist/main.js",
+    "package": "node scripts/package-release.mjs"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

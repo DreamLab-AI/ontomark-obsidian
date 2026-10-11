@@ -8,9 +8,13 @@ Ontomark treats typed Markdown pages as an ontology. Pages whose frontmatter dec
 
 This repository contains the Obsidian plugin. The portable Rust engine is maintained separately in [Ontomark](https://github.com/DreamLab-AI/ontomark). You do not need the other DreamLab repositories to install or build the plugin.
 
-1. Build the plugin (see "Build and test") or take a release.
-2. Copy `main.js`, `manifest.json` and `styles.css` from `dist/` into `<vault>/.obsidian/plugins/ontomark/`.
-3. In Obsidian, open Settings, Community plugins, and enable Ontomark.
+1. Download [ontomark-obsidian-0.1.0.zip](https://github.com/DreamLab-AI/ontomark-obsidian/releases/download/0.1.0/ontomark-obsidian-0.1.0.zip) from the [release](https://github.com/DreamLab-AI/ontomark-obsidian/releases/tag/0.1.0).
+2. Extract it into `<vault>/.obsidian/plugins/`. It creates `ontomark/main.js`, `ontomark/manifest.json` and `ontomark/styles.css`, with the licence notices.
+3. In Obsidian, open Settings → Community plugins and enable Ontomark. Reload Obsidian if it was open during installation.
+
+The ZIP is ready to use on Linux, including CachyOS. No Node, npm, Rust, system WASM library or internet connection is needed at runtime. The engine is already embedded in `main.js`. Desktop acceptance was run in Obsidian 1.14.4; mobile is not supported.
+
+Individual `main.js`, `manifest.json` and `styles.css` files are also attached to the release for manual installation and Obsidian's community plugin tooling. A SHA-256 receipt accompanies the ZIP.
 
 ## Quickstart on any vault
 

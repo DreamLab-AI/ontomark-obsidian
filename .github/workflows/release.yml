@@ -12,6 +12,7 @@ jobs:
         run: node -e 'if (process.env.GITHUB_REF_NAME !== require("./manifest.json").version) process.exit(1)'
       - run: npm ci --include=dev
       - run: npm run build && npm test && npm run test:wasm && npm run check:bundle && npm run test:offline
+      - run: npm run package
       - name: Publish installable plugin files
         env: {GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'}
-        run: gh release create "$GITHUB_REF_NAME" dist/main.js dist/manifest.json dist/styles.css --verify-tag --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" dist/main.js dist/manifest.json dist/styles.css release/*.zip release/*.sha256 --verify-tag --generate-notes
