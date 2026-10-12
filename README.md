@@ -60,10 +60,10 @@ Language models are good at reading a note and bad at being trusted with your on
 
 - The model receives the note's text, its label and the keys it may fill. Never other notes, never your vault path, never your API key.
 - The engine grounds every proposed **name** against the labels and aliases already in your vault; the model's own identifiers are ignored. A name that fits two notes is withheld as ambiguous, not guessed.
-- Every value needs a verbatim quote from the note that actually mentions it. Literals are checked against their types (`3,5` is not a decimal; `2023-02-29` is not a date).
+- Every value needs a verbatim quote from the note, and the quote has to mention the value. Literals are checked against their types (`3,5` is not a decimal; `2023-02-29` is not a date).
 - Everything accepted becomes **one** patch, shown as the usual diff with the evidence highlighted. Everything refused is listed with the reason. Apply is the normal reviewed-edit path; undo is Obsidian's undo.
 
-The only network call the plugin can make is to the endpoint you type in, and only when you run the command. [ADR-OBS-003](docs/adr/ADR-OBS-003-ingest-action-and-offline-contract.md) is the full decision.
+One endpoint, the one you type in, is the only place the plugin can send anything, and only when you run the command. [ADR-OBS-003](docs/adr/ADR-OBS-003-ingest-action-and-offline-contract.md) is the full decision.
 
 ## Why it works
 
@@ -78,7 +78,7 @@ Two things make the approach sound rather than hopeful. **OWL 2 EL** is the frag
 
 ## Under the hood
 
-The engine is [Ontomark](https://github.com/DreamLab-AI/ontomark), a Rust workspace (parser, typed model, `whelk-el` reasoner, RDF/SPARQL compiler, ingest) compiled to WebAssembly and embedded in the plugin, running in a background worker. The graph view is the shared [`ontomark-graph`](https://github.com/DreamLab-AI/ontomark/tree/main/packages/graph) package. The plugin itself is TypeScript, built with esbuild against the Obsidian API, and its release gate runs the built plugin in a Docker container with networking disabled and a tripwire on any socket, DNS or fetch.
+Under the plugin sits [Ontomark](https://github.com/DreamLab-AI/ontomark), a Rust workspace (parser, typed model, `whelk-el` reasoner, RDF/SPARQL compiler, ingest) compiled to WebAssembly and embedded in the plugin, running in a background worker. The graph view is the shared [`ontomark-graph`](https://github.com/DreamLab-AI/ontomark/tree/main/packages/graph) package. The plugin itself is TypeScript, built with esbuild against the Obsidian API, and its release gate runs the built plugin in a Docker container with networking disabled and a tripwire on any socket, DNS or fetch.
 
 **Limits worth knowing.** Desktop only for now. Reasoning covers the implemented part of OWL 2 EL (no property-range reasoning, no broader individual-level reasoning); unsupported constructs mark the result incomplete. Very large vaults fall back to a relevant-only classification policy and say so. SPARQL refuses UPDATE, SERVICE, FROM and DESCRIBE, and caps rows and time. Ingest proposes facts against the vocabulary you already have; it will not invent classes, and the guards decide what is *safe* to write, not what is *true*, which is why you review. Until the ingest command ships, the plugin makes no network requests at all.
 
@@ -88,7 +88,7 @@ The engine is [Ontomark](https://github.com/DreamLab-AI/ontomark), a Rust worksp
 2. Extract it into `<vault>/.obsidian/plugins/`; it creates an `ontomark` folder.
 3. **Settings → Community plugins**, enable Ontomark, reload if Obsidian was open.
 
-The release includes the engine: no Node, Rust, account, database or internet connection is needed to run it.
+Each release ships with the engine inside it: no Node, Rust, account, database or internet connection is needed.
 
 ## Frontmatter reference
 
