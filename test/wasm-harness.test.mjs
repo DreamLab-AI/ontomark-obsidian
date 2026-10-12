@@ -45,6 +45,10 @@ function replay(engine) {
     const step = { ...raw };
     if (step.files === "@vault") step.files = [...files].map(([path, text]) => ({ path, text }));
     if (step.base_digest === "@digest") step.base_digest = digest(files.get(step.path));
+    // `@plan:N` feeds step N's `ingest_plan` result back as the request.
+    if (typeof step.request === "string" && step.request.startsWith("@plan:")) {
+      step.request = JSON.parse(lines[Number(step.request.slice(6))]).result.request;
+    }
     const line = engine.handle(JSON.stringify(step));
     if (JSON.parse(line).ok) {
       if (step.kind === "upsert") files.set(step.path, step.text);
