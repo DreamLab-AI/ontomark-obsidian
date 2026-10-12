@@ -12,6 +12,8 @@ import { ENTITY_VIEW, EntityView } from "./views/entity-view";
 import { QUERY_VIEW, QueryView } from "./views/query-view";
 import { GRAPH_VIEW, GraphView } from "./views/graph-view";
 import { confirmWithDiff } from "./views/diff-modal";
+import { confirmIngest } from "./views/ingest-modal";
+import { callModel } from "./ingest-transport";
 
 export { ENTITY_VIEW, QUERY_VIEW, GRAPH_VIEW };
 export type { OntomarkSettings };
@@ -53,6 +55,8 @@ export default class OntomarkPlugin extends Plugin {
   api!: OntomarkApi;
   override settings: OntomarkSettings = { ...DEFAULT_SETTINGS };
   ready!: Promise<void>;
+  /** Assisted-ingest API key: memory only, never in data.json, cleared on unload. */
+  ingestKey = "";
 
   private workerUrl = "";
   private listeners = new Set<(e: ChangeEvent) => void>();
@@ -89,6 +93,7 @@ export default class OntomarkPlugin extends Plugin {
 
   override onunload(): void {
     this.autoClassify.cancel();
+    this.ingestKey = "";
     this.apiUnsubscribe?.();
     this.apiUnsubscribe = null;
     this.listeners.clear();
@@ -290,7 +295,38 @@ export default class OntomarkPlugin extends Plugin {
     }
   }
 
+  /** Plan, ask the model (the one network call), ground the answer, then review and apply. */
+  private extractFacts(): void {
+    const file = this.app.workspace.getActiveFile();
+    if (!file) {
+      new Notice("Ontomark: open a note first.");
+      return;
+    }
+    const { ingestEndpoint, ingestModel } = this.settings;
+    if (!ingestEndpoint) {
+      new Notice("Ontomark: set an ingest endpoint in settings first.");
+      return;
+    }
+    const key = this.ingestKey;
+    if (!key) {
+      new Notice("Ontomark: enter the API key for this session in settings.");
+      return;
+    }
+    void this.guard(async () => {
+      await this.ready;
+      const { request } = await this.api.ingestPlan(file.path);
+      const responses = await callModel(ingestEndpoint, key, ingestModel, request, (m) => new Notice(`Ontomark: ${m}.`));
+      const result = await this.api.ingestAccept(file.path, request, responses);
+      if (!result.preview) {
+        await confirmIngest(this.app, result);
+        return;
+      }
+      this.announce(await this.api.applyPatch(result.preview, () => confirmIngest(this.app, result)));
+    });
+  }
+
   private registerCommands(): void {
+    this.addCommand({ id: "extract-facts", name: "Extract facts from this note", callback: () => this.extractFacts() });
     this.addCommand({ id: "open-graph", name: "Open ontology graph", callback: () => void this.openGraphView() });
     this.addCommand({ id: "open-panel", name: "Open ontology panel", callback: () => void this.openEntityView() });
     this.addCommand({ id: "open-query", name: "Open SPARQL query", callback: () => void this.openQueryView() });

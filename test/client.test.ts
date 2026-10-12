@@ -254,3 +254,60 @@ describe("OntomarkClient generation guard (EXP-06)", () => {
     expect(await code(client.index())).toBe("disposed");
   });
 });
+
+describe("assisted ingest requests (ADR-OBS-003)", () => {
+  const bob = { path: "People/Bob.md", text: "---\ntype: individual\n---\nBob is a person. Bob owns Rex.\n" };
+
+  it("ingestPlan and ingestAccept are reads: answered after a mutation they are stale, never applied", async () => {
+    const { client, workers } = setup();
+    await client.start([...readVault(), bob], "generic");
+    const { request } = await client.ingestPlan(bob.path);
+    for (const run of [() => client.ingestPlan(bob.path), () => client.ingestAccept(bob.path, request, [])]) {
+      const w = workers[0];
+      const held: WorkerToHost[] = [];
+      const deliver = w.onmessage!;
+      w.onmessage = (ev) => held.push(ev.data);
+      const read = run();
+      while (held.length < 1) await tick(1);
+      w.onmessage = deliver;
+      await client.upsert("Welcome.md", `Edited ${held.length} ${Math.random()}.\n`);
+      deliver({ data: held[0] }); // computed at the old generation
+      expect(await code(read)).toBe("stale");
+    }
+    client.dispose();
+  });
+
+  it("plan, accept and apply: the preview is a full PatchProposal and withheld reasons keep the engine's tag", async () => {
+    const { client } = setup({ budget: 256 });
+    await client.start([...readVault(), bob], "generic");
+    const { request, digest } = await client.ingestPlan(bob.path);
+    expect(request.contract).toBe("ontomark-ingest/facts/1");
+    expect(digest.startsWith("sha256:")).toBe(true);
+    const responses = [
+      {
+        chunk: request.chunks[0].index,
+        assertions: [
+          { key: "instance-of", value: "Person", evidence: "Bob is a person" },
+          { key: "no-such-key", value: "x", evidence: "Bob" },
+        ],
+      },
+    ];
+    const result = await client.ingestAccept(bob.path, request, responses);
+    expect(result.candidates.accepted.map((a) => a.written)).toEqual(["[[Person]]"]);
+    expect(result.candidates.accepted[0].evidence[0].quote).toBe("Bob is a person");
+    expect(result.candidates.withheld[0].reason.reason).toBe("unknown_key");
+    expect(result.candidates.withheld[0].evidence).toBeNull();
+    const p = result.preview!;
+    expect(p.path).toBe(bob.path);
+    expect(p.base_text).toBe(bob.text);
+    expect(p.no_op).toBe(false);
+    expect(p.new_text).toContain("instance-of:");
+    // Applied for real, the same ask again grounds nothing new and writes no patch.
+    await client.upsert(bob.path, p.new_text);
+    const again = await client.ingestAccept(bob.path, (await client.ingestPlan(bob.path)).request, responses);
+    expect(again.candidates.accepted).toEqual([]);
+    expect(again.candidates.withheld.find((w) => w.key === "instance-of")?.reason.reason).toBe("already_present");
+    expect(again.preview).toBeNull();
+    client.dispose();
+  });
+});

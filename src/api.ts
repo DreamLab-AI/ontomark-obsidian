@@ -15,6 +15,10 @@ import type {
   EntityKind,
   FileText,
   IndexResult,
+  IngestAcceptResult,
+  IngestPlanResult,
+  ModelRequest,
+  ModelResponse,
   PatchOp,
   PatchProposal,
   ProfileId,
@@ -148,6 +152,16 @@ export class OntomarkApi {
 
   frontmatter(path: string): Promise<FrontmatterResult> {
     return this.client.frontmatter(path) as Promise<FrontmatterResult>;
+  }
+
+  /** Plan an assisted-ingest request for `path` (read; no model is contacted). */
+  ingestPlan(path: string): Promise<IngestPlanResult> {
+    return this.client.ingestPlan(path);
+  }
+
+  /** Ground the model's `responses`; `preview` is a `PatchProposal` for `applyPatch`. */
+  ingestAccept(path: string, request: ModelRequest, responses: ModelResponse[]): Promise<IngestAcceptResult> {
+    return this.client.ingestAccept(path, request, responses);
   }
 
   /** Classify the current generation; a later edit cancels it and it rejects with `stale` or `cancelled`. */

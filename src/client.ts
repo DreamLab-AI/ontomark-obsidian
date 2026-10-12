@@ -17,6 +17,11 @@ import {
   type FileText,
   type HostToWorker,
   type IndexResult,
+  type IngestAcceptResult,
+  type IngestAcceptWire,
+  type IngestPlanResult,
+  type ModelRequest,
+  type ModelResponse,
   type PatchOp,
   type PatchProposal,
   type ProfileId,
@@ -181,6 +186,44 @@ export class OntomarkClient {
       base_digest: baseDigest,
       ops,
     }) as Promise<PatchProposal>;
+  }
+
+  /** Plan an assisted-ingest request for `path` (a read: the engine never contacts a model). */
+  ingestPlan(path: string): Promise<IngestPlanResult> {
+    return this.send({ kind: "ingest_plan", generation: this.generation, path }) as Promise<IngestPlanResult>;
+  }
+
+  /**
+   * Turn the model's `responses` into guarded candidates. The engine's `preview`
+   * lacks the fields the host already knows; they are filled in here so
+   * `OntomarkApi.applyPatch` can take it unchanged.
+   */
+  async ingestAccept(path: string, request: ModelRequest, responses: ModelResponse[]): Promise<IngestAcceptResult> {
+    const wire = (await this.send({
+      kind: "ingest_accept",
+      generation: this.generation,
+      path,
+      request,
+      responses,
+    })) as IngestAcceptWire;
+    const p = wire.preview;
+    return {
+      path: wire.path,
+      candidates: wire.candidates,
+      preview: p
+        ? {
+            path: wire.path,
+            base_digest: `sha256:${wire.candidates.digest}`,
+            base_text: p.base_text,
+            new_text: p.new_text,
+            new_digest: p.new_digest,
+            diff: p.diff,
+            edits: p.edits,
+            preserved_bytes: 0, // not reported by ingest_accept
+            no_op: p.edits.length === 0,
+          }
+        : null,
+    };
   }
 
   version(): Promise<unknown> {

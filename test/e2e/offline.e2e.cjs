@@ -75,6 +75,11 @@ async function main() {
   runtime.installTripwire();
   globalThis.Worker = runtime.BlobWorker;
   const obsidian = require("./obsidian-shim.cjs");
+  // The tripwire also covers the plugin's one network primitive: any call is recorded as an attempt.
+  obsidian.requestUrlHost.impl = async (req) => {
+    runtime.attempts.push({ thread: "main", what: "requestUrl", url: req && req.url });
+    throw new Error("network disabled by ontomark offline test: requestUrl");
+  };
 
   // ---- install check ----
   const installed = fs.readdirSync(pluginDir).sort();
@@ -227,6 +232,16 @@ async function main() {
   await waitFor(async () => (await api.index().catch(() => null))?.profile === "estate");
   const estate = await api.index();
   check("estate profile: pages without `resource` refused", estate.profile === "estate" && estate.entities.length === 0 && estate.diagnostics.some((d) => d.code === "iri_missing"), { entities: estate.entities.length });
+
+  // ---- assisted ingest is off until an endpoint is set (ADR-OBS-003) ----
+  check("ingest: command is registered", app.commands.has("ontomark:extract-facts"));
+  app.workspace.activeFile = app.vault.getAbstractFileByPath("Welcome.md");
+  const noticesBefore = obsidian.Notice.log.length;
+  app.executeCommand("ontomark:extract-facts");
+  await tick(50);
+  const ingestNotices = obsidian.Notice.log.slice(noticesBefore);
+  check("ingest: no endpoint -> refusing Notice naming the setting, nothing sent", ingestNotices.some((n) => n.includes("set an ingest endpoint in settings")) && runtime.attempts.length === 0, { ingestNotices, attempts: runtime.attempts });
+  check("ingest: endpoint default is empty and the key is not persisted", plugin.settings.ingestEndpoint === "" && plugin.ingestKey === "" && !fs.readFileSync(path.join(pluginDir, "data.json"), "utf8").includes("ingestKey"));
 
   // ---- unload / reload ----
   const workersBefore = runtime.liveWorkers();

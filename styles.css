@@ -34,3 +34,6 @@
 .ontomark-graph-details {display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
 .ontomark-graph-details code {font-size:11px;overflow-wrap:anywhere;}
 .ontomark-graph-search {width:100%;}
+.ontomark-ingest-quote { margin: 2px 0 6px 0; padding-left: var(--size-4-2); border-left: 2px solid var(--background-modifier-border); color: var(--text-muted); cursor: pointer; }
+.ontomark-ingest-reason { font-family: var(--font-monospace); color: var(--text-warning); }
+.ontomark-ingest-tier { color: var(--text-muted); }

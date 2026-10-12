@@ -8,12 +8,18 @@ export interface OntomarkSettings {
   profile: ProfileId;
   autoClassify: boolean;
   queryLimit: number;
+  /** Chat-completions URL for assisted ingest. Empty = the feature is off. */
+  ingestEndpoint: string;
+  /** Passed as the `model` field of the request; empty omits it. */
+  ingestModel: string;
 }
 
 export const DEFAULT_SETTINGS: OntomarkSettings = {
   profile: "generic",
   autoClassify: true,
   queryLimit: 1000,
+  ingestEndpoint: "",
+  ingestModel: "",
 };
 
 /** Settings tab: profile, auto-classification and the SPARQL row limit. */
@@ -30,7 +36,7 @@ export class OntomarkSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     containerEl.createEl("p", {
-      text: "Everything runs locally on this device. Ontomark uses no network, no account and no database.",
+      text: "Everything runs locally on this device. Ontomark uses no account and no database. Assisted ingest is the one exception: when you set an endpoint below, the text of the note you choose is sent to that endpoint and nowhere else.",
       cls: "ontomark-privacy",
     });
 
@@ -77,5 +83,40 @@ export class OntomarkSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           }),
       );
+
+    new Setting(containerEl).setName("Assisted ingest (optional, uses the network)").setHeading();
+
+    new Setting(containerEl)
+      .setName("Model endpoint")
+      .setDesc("Full address of an OpenAI-compatible chat-completions endpoint. Empty keeps the feature off.")
+      .addText((t) =>
+        t.setValue(this.plugin.settings.ingestEndpoint).onChange(async (v) => {
+          this.plugin.settings.ingestEndpoint = v.trim();
+          await this.plugin.saveSettings();
+        }),
+      );
+
+    new Setting(containerEl)
+      .setName("Model name")
+      .setDesc("Sent as the model field of the request.")
+      .addText((t) =>
+        t.setValue(this.plugin.settings.ingestModel).onChange(async (v) => {
+          this.plugin.settings.ingestModel = v.trim();
+          await this.plugin.saveSettings();
+        }),
+      );
+
+    const keyStatus = (): string => (this.plugin.ingestKey ? "set for this session" : "not set");
+    const key = new Setting(containerEl)
+      .setName("API key (this session only)")
+      .setDesc(`Held in memory, never saved to disk, forgotten when the plugin unloads. Currently: ${keyStatus()}.`);
+    key.addText((t) => {
+      t.inputEl.type = "password";
+      t.inputEl.autocomplete = "off";
+      t.onChange((v) => {
+        this.plugin.ingestKey = v.trim();
+        key.setDesc(`Held in memory, never saved to disk, forgotten when the plugin unloads. Currently: ${keyStatus()}.`);
+      });
+    });
   }
 }

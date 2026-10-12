@@ -27,5 +27,14 @@
   {"kind": "classify", "generation": 4},
   {"kind": "set_profile", "generation": 5, "profile": "estate"},
   {"kind": "index", "generation": 5},
-  {"$raw": "{not json"}
+  {"$raw": "{not json"},
+  {"kind": "set_profile", "generation": 6, "profile": "generic"},
+  {"kind": "upsert", "generation": 7, "path": "Ontology/Wolf.md", "text": "---\ntype: class\n---\nA wolf is a wild mammal and a close relative of the dog. It is disjoint with the cat.\n"},
+  {"kind": "ingest_plan", "generation": 7, "path": "Ontology/Wolf.md"},
+  {"kind": "ingest_accept", "generation": 7, "path": "Ontology/Wolf.md", "request": "@plan:31", "responses": [{"chunk": 0, "assertions": [{"key": "subclass-of", "value": "Mammal", "evidence": "a wild mammal"}, {"key": "disjoint-with", "value": "Cat", "evidence": "disjoint with the cat"}, {"key": "equivalent-to", "value": "Dog", "evidence": "relative of the dog"}, {"key": "subclass-of", "value": "Creature", "evidence": "a wild mammal"}, {"key": "subclass-of", "value": "Unicorn", "evidence": "relative of the dog"}, {"key": "quality", "value": "0.9", "evidence": "wild"}]}]},
+  {"kind": "ingest_plan", "generation": 7, "path": "Welcome.md"},
+  {"kind": "ingest_plan", "generation": 7, "path": "Broken.md"},
+  {"kind": "upsert", "generation": 8, "path": "Ontology/Wolf.md", "text": "---\ntype: class\n---\nA wolf is a wild mammal. Edited after the plan.\n"},
+  {"kind": "ingest_accept", "generation": 8, "path": "Ontology/Wolf.md", "request": "@plan:31", "responses": []},
+  {"kind": "ingest_accept", "generation": 8, "path": "Ontology/Wolf.md", "request": "@plan:31", "responses": [], "options": {"max_chunk_chars": 50}}
 ]

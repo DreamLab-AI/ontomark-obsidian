@@ -73,6 +73,14 @@ export type EngineRequest =
       base_digest: string;
       ops: PatchOp[];
     }
+  | { kind: "ingest_plan"; generation: number; path: string }
+  | {
+      kind: "ingest_accept";
+      generation: number;
+      path: string;
+      request: ModelRequest;
+      responses: ModelResponse[];
+    }
   | { kind: "version" };
 
 export const MUTATIONS = new Set<EngineRequest["kind"]>([
@@ -194,6 +202,140 @@ export interface PatchProposal {
   edits: { op: number; before: { start: number; end: number }; after: { start: number; end: number } }[];
   preserved_bytes: number;
   no_op: boolean;
+}
+
+// ---- Assisted ingest (mirrors ontomark-ingest: contract.rs, accept.rs, chunk.rs) ----
+
+/** `ontomark_ingest::NoteRef`. `kind` and `form` fields are opaque to the host. */
+export interface NoteRef {
+  document: string;
+  digest: string;
+  iri: string;
+  kind: unknown;
+  label: string;
+}
+
+/** `ontomark_ingest::KeySpec`: a frontmatter key the model may fill. */
+export interface KeySpec {
+  key: string;
+  predicate: string;
+  form: unknown;
+  value: { kind: "name" } | { kind: "literal"; datatype: string };
+  range: string | null;
+  /** Values the note already holds, as written. */
+  present: string[];
+}
+
+/** `ontomark_ingest::Chunk`. */
+export interface Chunk {
+  index: number;
+  span: { start: number; end: number };
+  heading_path: string[];
+  text: string;
+}
+
+/** `ontomark_ingest::ModelRequest`: posted back to `ingest_accept` unchanged. */
+export interface ModelRequest {
+  contract: string;
+  note: NoteRef;
+  instructions: string;
+  keys: KeySpec[];
+  chunks: Chunk[];
+  response_schema: unknown;
+}
+
+export interface ProposedAssertion {
+  key: string;
+  value: string;
+  evidence: string;
+}
+
+/** `ontomark_ingest::ModelResponse`: one per chunk answered. */
+export interface ModelResponse {
+  chunk: number;
+  assertions: ProposedAssertion[];
+}
+
+/** `ingest_plan` result. */
+export interface IngestPlanResult {
+  path: string;
+  /** Digest of the source the request was planned against. */
+  digest: string;
+  request: ModelRequest;
+}
+
+export interface EvidenceSpan {
+  chunk: number;
+  /** Byte span in the document source. */
+  span: { start: number; end: number };
+  /** The same span in UTF-16 code units (what the editor counts). */
+  utf16: { start: number; end: number };
+  quote: string;
+}
+
+export interface CandidateAssertion {
+  key: string;
+  predicate: string;
+  written: string;
+  grounded: string | null;
+  tier: string | null;
+  datatype: string | null;
+  evidence: EvidenceSpan[];
+  confidence: number;
+  method: string;
+}
+
+/**
+ * `ontomark_ingest::WithholdReason`: internally tagged with `reason`
+ * (`#[serde(tag = "reason")]`), so on the wire it is `withheld[i].reason.reason`.
+ * The tag is rendered verbatim; the other fields depend on the variant.
+ */
+export type WithholdReason = { reason: string } & Record<string, unknown>;
+
+export interface Withheld {
+  chunk: number;
+  key: string;
+  value: string;
+  reason: WithholdReason;
+  evidence: EvidenceSpan | null;
+}
+
+export interface IngestDiagnostic {
+  severity: "info" | "warning" | "error";
+  code: string;
+  message: string;
+}
+
+export interface Candidates {
+  document: string;
+  digest: string;
+  patch: unknown;
+  accepted: CandidateAssertion[];
+  withheld: Withheld[];
+  diagnostics: IngestDiagnostic[];
+}
+
+/** What `ingest_accept` carries as `preview`: `PatchProposal` minus the fields the host knows. */
+export interface IngestPreviewWire {
+  base_text: string;
+  new_text: string;
+  new_digest: string;
+  diff: string;
+  edits: PatchProposal["edits"];
+}
+
+/** `ingest_accept` result as the engine sends it. */
+export interface IngestAcceptWire {
+  path: string;
+  candidates: Candidates;
+  preview: IngestPreviewWire | null;
+}
+
+/** `ingest_accept` result with `preview` completed into a full, applicable `PatchProposal`. */
+export interface IngestAcceptResult {
+  path: string;
+  candidates: Candidates;
+  preview: PatchProposal | null;
 }
 
 // ---- Worker envelopes ----

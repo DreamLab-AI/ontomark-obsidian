@@ -295,6 +295,7 @@ class Workspace extends Events {
     this._layoutReady = false;
     this._readyCbs = [];
     this.activeFile = null;
+    this.activeEditor = null;
     this.opened = [];
   }
   onLayoutReady(cb) {
@@ -337,6 +338,13 @@ class App {
     this.notices = [];
     this.modals = [];
     this.onModalOpen = null;
+  }
+  /** Harness: run a registered command the way the palette does (fire-and-forget callback). */
+  executeCommand(id) {
+    const cmd = this.commands.get(id);
+    if (!cmd) return false;
+    cmd.callback();
+    return true;
   }
 }
 
@@ -480,6 +488,25 @@ class ToggleComponent {
   }
 }
 
+class TextComponent {
+  constructor(el) {
+    this.inputEl = el.createEl("input", { attr: { type: "text" } });
+    this._onChange = null;
+  }
+  setValue(v) {
+    this.inputEl.value = String(v);
+    return this;
+  }
+  getValue() {
+    return this.inputEl.value;
+  }
+  onChange(fn) {
+    this._onChange = fn;
+    this.inputEl.addEventListener("change", () => fn(this.inputEl.value));
+    return this;
+  }
+}
+
 class Setting {
   constructor(containerEl) {
     this.settingEl = containerEl.createDiv({ cls: "setting-item" });
@@ -502,6 +529,12 @@ class Setting {
   }
   addDropdown(cb) {
     const c = new DropdownComponent(this.controlEl);
+    this.components.push(c);
+    cb(c);
+    return this;
+  }
+  addText(cb) {
+    const c = new TextComponent(this.controlEl);
     this.components.push(c);
     cb(c);
     return this;
@@ -544,7 +577,18 @@ function debounce(fn, ms = 0, resetTimer = false) {
 
 const normalizePath = (p) => p.replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\/|\/$/g, "");
 
+// The network primitive, as a trampoline to a swappable implementation. It is
+// exported from the start (the bundle reads the export at call time), and the
+// default DENIES: the offline test records any use as a network attempt, the
+// ingest test installs a stub.
+const requestUrlHost = { impl: async (req) => { throw new Error(`requestUrl not stubbed: ${req && req.url}`); } };
+function requestUrl(req) {
+  return Promise.resolve().then(() => requestUrlHost.impl(req));
+}
+
 module.exports = {
+  requestUrl,
+  requestUrlHost,
   App,
   Component,
   Events,
