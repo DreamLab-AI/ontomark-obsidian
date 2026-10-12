@@ -3,7 +3,8 @@
   "name": "Ontomark",
   "version": "0.2.0",
   "minAppVersion": "1.5.0",
-  "description": "Ontologies in Markdown: index typed notes, run local reasoning and SPARQL, apply reviewed frontmatter edits, and (optionally) extract facts with a model you point it at. Offline by default; one endpoint, only when you run the command. Desktop only for now.",
+  "description": "Ontologies in Markdown: index typed notes, run local OWL 2 EL reasoning and SPARQL, apply reviewed frontmatter edits, and optionally extract facts with a model you choose. Offline by default",
   "author": "DreamLab AI",
+  "authorUrl": "https://thedreamlab.uk",
   "isDesktopOnly": true
 }
