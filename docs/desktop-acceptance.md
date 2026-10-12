@@ -35,3 +35,24 @@ The graph consumer pins `@dreamlab-ai/ontomark-graph` 0.1.0 from the immutable O
 [Raw graph receipt](evidence/desktop-graph-acceptance.log) and [screenshot](evidence/desktop-graph.png) record the scratch vault. [Red keyboard witness](evidence/desktop-graph-arrowleft-red.log) demonstrates the selection defect before its fix. This is runtime evidence for this synthetic fixture, separate from the network-isolated shim.
 
 The [README screenshots](screenshots/README.md) were captured from the installed plugin, with the sidebar collapsed to show each view clearly. Production npm audit reports zero findings; build dependencies retain two moderate advisories through the Obsidian development SDK. These are separate from the installed bundle, and an independent security-agent review was unavailable.
+
+## Assisted ingest acceptance (2026-10-12)
+
+Plugin source `46c3c66` (engine `v0.2.0`, source `8a3b6cc`, verified by the SHA-256 in `engine.json`) on installed Obsidian 1.14.4 Linux, same scratch vault, driven over raw CDP against the Electron renderer. The model endpoint was a local fixed-answer stub inside the sidecar, so every byte the plugin sent and received is on record; no external service was involved. Covers the gates in [ADR-OBS-003](adr/ADR-OBS-003-ingest-action-and-offline-contract.md).
+
+| Check | Observed result |
+| --- | --- |
+| Plan | `ingestPlan` on a real class note: one chunk, six class-appropriate keys (no `instance-of`), evidence-bearing note block. No network. |
+| Session key | Entered through settings; `data.json` provably does not contain it. Cleared on unload. |
+| One call, one destination | The stub logged exactly one request, to the typed URL verbatim, bearer present (`evidence/desktop-ingest-stub-requests.jsonl`). |
+| Modal | Diff adding `subclass-of: [[Animal]]`, the accepted fact with its grounding tier and quote, and two refusals named (`ungrounded` for an invented class, `evidence_not_found` for a quote not in the note). `screenshots/ingest-modal.png`. |
+| Apply | Real `vault.process` wrote exactly the proposed bytes; body preserved; one Notice; modal closed. |
+| Repeat run | The written fact returned as `already_present`; the two refusals persisted; one request. |
+| Stale edit | Editing the note between plan and accept refused with the digest mismatch; nothing written. |
+| Unreachable endpoint | `model_unavailable` Notice carrying `net::ERR_CONNECTION_REFUSED`; file unchanged; no modal. |
+| Malformed JSON | Chunk dropped with its Notice; modal reported nothing grounded; file unchanged. |
+| Non-ASCII span | A quote past an em dash and guillemets was located; clicking it selected exactly that text in the editor (UTF-16 offsets correct). `evidence/desktop-ingest-nonascii.png`. |
+| Cancel on unload | With a 4 s slow stub: a second invocation mid-run was refused; disabling the plugin mid-request left exactly one request on the stub and none after; key cleared. |
+| Undo | Obsidian's editor undo restored the pre-apply text on disk. |
+
+Not covered: a real remote model, redirects from the endpoint, mobile. The manifest and README release amendment remains deferred to the release commit.

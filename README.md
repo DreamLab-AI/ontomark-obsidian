@@ -52,6 +52,8 @@ Open **Ontology graph**. Solid edges are what you wrote; the dashed `Rex → Ani
 
 ![How the plugin works, as a bench of nine stations: notes in, a typed-frontmatter gate, indexer, reasoner, graph, panel, SPARQL, reviewed diff, and the optional ingest bolt-on](docs/figures/ontomark-anatomy.svg)
 
+![The ingest modal in Obsidian: a diff adding one grounded fact, its quote, and two refusals with their reasons](docs/screenshots/ingest-modal.png)
+
 <sup>Every count in the drawing comes from one six-note example vault (`docs/figures/anatomy-src/model.mjs`); the build fails if the drawing stops matching it. Ingest is drawn switched on; it is off by default and does nothing until you set an endpoint. The figure follows your system's light or dark setting.</sup>
 
 ### About assisted ingest
