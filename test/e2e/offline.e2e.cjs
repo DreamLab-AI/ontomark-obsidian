@@ -74,6 +74,8 @@ async function main() {
   const runtime = require("./runtime-shim.cjs");
   runtime.installTripwire();
   globalThis.Worker = runtime.BlobWorker;
+  // Obsidian's renderer global for the window in use; timers are scoped to it.
+  globalThis.activeWindow = globalThis;
   const obsidian = require("./obsidian-shim.cjs");
   // The tripwire also covers the plugin's one network primitive: any call is recorded as an attempt.
   obsidian.requestUrlHost.impl = async (req) => {

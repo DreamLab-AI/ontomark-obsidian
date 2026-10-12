@@ -41,8 +41,8 @@ export class OntomarkError extends Error {
 }
 
 export interface Timers {
-  set(fn: () => void, ms: number): unknown;
-  clear(handle: unknown): void;
+  set(fn: () => void, ms: number): number;
+  clear(handle: number): void;
 }
 
 export interface ClientOptions {
@@ -73,23 +73,16 @@ interface Pending {
   read: boolean;
   resolve: (value: unknown) => void;
   reject: (err: OntomarkError) => void;
-  timer: unknown;
+  timer: number;
 }
 
 const CLASSIFY_CHANNEL = "classify";
 
-/**
- * The window whose timers we should use. Obsidian's `activeWindow` keeps a
- * popout window's timers on that window; under Node (tests) there is no
- * window, and `globalThis` carries the same functions.
- */
-function timerHost(): Pick<Window, "setTimeout" | "clearTimeout"> {
-  return typeof activeWindow !== "undefined" ? activeWindow : (globalThis as unknown as Window);
-}
-
+// Timers belong to the active window so a popout window keeps its own
+// (Obsidian's `activeWindow`). Tests run under Node and inject `timers`.
 const defaultTimers: Timers = {
-  set: (fn, ms) => timerHost().setTimeout(fn, ms),
-  clear: (h) => timerHost().clearTimeout(h as number),
+  set: (fn, ms) => activeWindow.setTimeout(fn, ms),
+  clear: (h) => activeWindow.clearTimeout(h),
 };
 
 export class OntomarkClient {

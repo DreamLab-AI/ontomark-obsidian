@@ -21,7 +21,7 @@ export interface WorkerCoreOptions {
   yieldNow?: () => Promise<void>;
 }
 
-const defaultYield = (): Promise<void> => new Promise((resolve) => globalThis.setTimeout(resolve, 0));
+const defaultYield = (): Promise<void> => new Promise((resolve) => self.setTimeout(resolve, 0));
 
 export function createWorkerCore(post: Post, options: WorkerCoreOptions): (msg: HostToWorker) => void {
   const yieldNow = options.yieldNow ?? defaultYield;

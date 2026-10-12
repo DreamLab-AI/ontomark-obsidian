@@ -23,7 +23,8 @@ export class InProcWorker implements WorkerLike {
       setTimeout(() => {
         if (!this.terminated) this.onmessage?.({ data: msg });
       }, 0),
-    { makeEngine: () => this.makeEngine() },
+    // Node has no `self`; yield through its own event loop.
+    { makeEngine: () => this.makeEngine(), yieldNow: () => new Promise((r) => setTimeout(r, 0)) },
   );
 
   /** When set and returning true, the message is swallowed: a worker stuck on it forever. */

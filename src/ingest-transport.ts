@@ -71,7 +71,7 @@ function unavailable(detail: string): OntomarkError {
 async function complete(endpoint: string, key: string, body: string): Promise<string> {
   let timer: number | undefined;
   const timeout = new Promise<never>((_, reject) => {
-    timer = timerHost().setTimeout(() => reject(unavailable(`no reply within ${TIMEOUT_MS / 1000} s`)), TIMEOUT_MS);
+    timer = activeWindow.setTimeout(() => reject(unavailable(`no reply within ${TIMEOUT_MS / 1000} s`)), TIMEOUT_MS);
   });
   try {
     const res = await Promise.race([
@@ -95,7 +95,7 @@ async function complete(endpoint: string, key: string, body: string): Promise<st
   } catch (err) {
     throw err instanceof OntomarkError ? err : unavailable(err instanceof Error ? err.message : String(err));
   } finally {
-    timerHost().clearTimeout(timer);
+    activeWindow.clearTimeout(timer);
   }
 }
 
@@ -119,15 +119,6 @@ export interface AbortToken {
  * embedded credentials, and the host must answer directly. A 3xx reply is
  * treated as unavailable (see `callModel`) rather than followed.
  */
-/**
- * The window whose timers we should use. Obsidian's `activeWindow` keeps a
- * popout window's timers on that window; under Node (tests) there is no
- * window, and `globalThis` carries the same functions.
- */
-function timerHost(): Pick<Window, "setTimeout" | "clearTimeout"> {
-  return typeof activeWindow !== "undefined" ? activeWindow : (globalThis as unknown as Window);
-}
-
 export function endpointProblem(endpoint: string): string | null {
   let u: URL;
   try {

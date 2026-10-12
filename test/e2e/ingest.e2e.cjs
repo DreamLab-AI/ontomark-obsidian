@@ -46,6 +46,7 @@ async function main() {
   const runtime = require("./runtime-shim.cjs");
   runtime.installTripwire();
   globalThis.Worker = runtime.BlobWorker;
+  globalThis.activeWindow = globalThis;
   const obsidian = require("./obsidian-shim.cjs");
   const manifest = JSON.parse(read(".obsidian/plugins/ontomark/manifest.json"));
 

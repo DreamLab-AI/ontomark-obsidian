@@ -6,11 +6,18 @@ import { OntomarkClient, OntomarkError } from "../src/client";
 import type { WorkerToHost } from "../src/protocol";
 import { InProcWorker, chainVault, readVault, tick, wasmGlue } from "./helpers";
 
+/** Node timers for the client under test; production uses the active window's. */
+const nodeTimers = {
+  set: (fn: () => void, ms: number) => setTimeout(fn, ms) as unknown as number,
+  clear: (h: number) => clearTimeout(h as unknown as NodeJS.Timeout),
+};
+
 function setup(opts: { budget?: number; timeouts?: Record<string, number> } = {}) {
   const workers: InProcWorker[] = [];
   const restarts: string[] = [];
   const progress: number[] = [];
   const client = new OntomarkClient({
+    timers: nodeTimers,
     spawn: () => {
       const w = new InProcWorker();
       workers.push(w);
@@ -146,6 +153,8 @@ describe("OntomarkClient generation guard (EXP-06)", () => {
   it("a timeout terminates the worker, rejects with timeout and replays state", async () => {
     const workers: InProcWorker[] = [];
     const client = new OntomarkClient({
+      timers: nodeTimers,
+      timers: nodeTimers,
       spawn: () => {
         const w = new InProcWorker();
         // The first worker never answers queries: a runaway evaluation.
@@ -210,6 +219,8 @@ describe("OntomarkClient generation guard (EXP-06)", () => {
     let clock = 0;
     const failures: string[] = [];
     const client = new OntomarkClient({
+      timers: nodeTimers,
+      timers: nodeTimers,
       spawn: () => {
         const w = new InProcWorker(() => {
           const inner = new wasmGlue.WasmEngine();
