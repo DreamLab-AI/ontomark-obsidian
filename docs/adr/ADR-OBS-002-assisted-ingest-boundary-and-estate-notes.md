@@ -2,7 +2,7 @@
 
 - Date: 2026-10-12
 - Decision status: proposed
-- Implementation status: none
+- Implementation status: none in this plugin. The shared core landed in Ontomark as `ontomark-ingest` ([`582cfa0`](https://github.com/DreamLab-AI/ontomark/commit/582cfa0), [ADR-OM-003](https://github.com/DreamLab-AI/ontomark/blob/main/docs/adr/ADR-OM-003-native-assisted-ingest.md)); the plugin-side decision is [ADR-OBS-003](ADR-OBS-003-ingest-action-and-offline-contract.md).
 - Activation status: inactive
 - Scope: this repository's product boundary and hand-off notes for the wider ADR fleet
 
