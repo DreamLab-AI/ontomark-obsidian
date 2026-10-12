@@ -1,6 +1,6 @@
 {
   "name": "ontomark-obsidian",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "description": "Ontologies in Markdown for Obsidian: local index, reasoning, SPARQL and guarded frontmatter edits",
   "license": "MIT OR Apache-2.0",
