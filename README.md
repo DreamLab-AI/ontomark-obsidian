@@ -50,16 +50,9 @@ Open **Ontology graph**. Solid edges are what you wrote; the dashed `Rex → Ani
 | **Reviewed edits** | Commands to make a note a class, individual or property, or add a parent. Every change is a diff you apply, and is refused if the file changed underneath it. |
 | **Assisted ingest** *(next release)* | Point the plugin at a model endpoint of your choosing and run *Propose values from this note*. The model suggests; the engine checks every suggestion against your vault and the note's own text; you see a diff with the evidence highlighted and decide. Off by default, absent until you configure it. |
 
-![Ontology graph in Obsidian, with asserted and inferred edges](docs/screenshots/graph.png)
+![How the plugin works, as a bench of nine stations: notes in, a typed-frontmatter gate, indexer, reasoner, graph, panel, SPARQL, reviewed diff, and the optional ingest bolt-on](docs/figures/ontomark-anatomy.svg)
 
-<details>
-<summary>Ontology panel and SPARQL view</summary>
-
-![Ontology panel showing entities and classification diagnostics](docs/screenshots/ontology-panel.png)
-
-![SPARQL query and results in Obsidian](docs/screenshots/sparql.png)
-
-</details>
+<sup>Every count in the drawing comes from one six-note example vault (`docs/figures/anatomy-src/model.mjs`); the build fails if the drawing stops matching it. Ingest is drawn switched on; it is off by default and does nothing until you set an endpoint. The figure follows your system's light or dark setting.</sup>
 
 ### About assisted ingest
 
