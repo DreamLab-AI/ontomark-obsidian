@@ -48,9 +48,9 @@ Open **Ontology graph**. Solid edges are what you wrote; the dashed `Rex → Ani
 | **Local reasoning** | An OWL 2 EL reasoner runs inside Obsidian and keeps up as you edit. Nothing is approximated: if a construct is unsupported, it says so. |
 | **SPARQL** | Ask structured questions (SELECT, ASK, CONSTRUCT) over what you stated, what was inferred, or both. A working example is loaded for you. |
 | **Reviewed edits** | Commands to make a note a class, individual or property, or add a parent. Every change is a diff you apply, and is refused if the file changed underneath it. |
-| **Assisted ingest** *(next release)* | Point the plugin at a model endpoint of your choosing and run *Propose values from this note*. The model suggests; the engine checks every suggestion against your vault and the note's own text; you see a diff with the evidence highlighted and decide. Off by default, absent until you configure it. |
+| **Assisted ingest** | Point the plugin at a model endpoint of your choosing, enter a key for the session, and run *Extract facts from this note*. The model suggests; the engine checks every suggestion against your vault and the note's own text; you see a diff with each quote beside its fact, and the refusals with their reasons, and decide. Off by default: nothing is sent until you set an endpoint, and then only to that one URL, only when you run the command. |
 
-![How the plugin works, as a bench of nine stations: notes in, a typed-frontmatter gate, indexer, reasoner, graph, panel, SPARQL, reviewed diff, and the optional ingest bolt-on](docs/figures/ontomark-anatomy.svg)
+![How the plugin works, as a bench of nine stations: notes in, a typed-frontmatter gate, indexer, reasoner, graph, panel, SPARQL, reviewed diff, and the optional ingest bolt-on, drawn plugged in](docs/figures/ontomark-anatomy.svg)
 
 ![The ingest modal in Obsidian: a diff adding one grounded fact, its quote, and two refusals with their reasons](docs/screenshots/ingest-modal.png)
 
@@ -86,7 +86,7 @@ Under the plugin sits [Ontomark](https://github.com/DreamLab-AI/ontomark), a Rus
 
 ## Install
 
-1. Download [ontomark-obsidian-0.1.0.zip](https://github.com/DreamLab-AI/ontomark-obsidian/releases/download/0.1.0/ontomark-obsidian-0.1.0.zip) from the [0.1.0 release](https://github.com/DreamLab-AI/ontomark-obsidian/releases/tag/0.1.0).
+1. Download [ontomark-obsidian-0.2.0.zip](https://github.com/DreamLab-AI/ontomark-obsidian/releases/download/v0.2.0/ontomark-obsidian-0.2.0.zip) from the [0.2.0 release](https://github.com/DreamLab-AI/ontomark-obsidian/releases/tag/v0.2.0).
 2. Extract it into `<vault>/.obsidian/plugins/`; it creates an `ontomark` folder.
 3. **Settings → Community plugins**, enable Ontomark, reload if Obsidian was open.
 
