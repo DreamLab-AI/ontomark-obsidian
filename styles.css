@@ -39,4 +39,4 @@
 .ontomark-ingest-tier { color: var(--text-muted); }
 
 /* An ingest endpoint the plugin will refuse to call. */
-.ontomark-invalid { border-color: var(--text-error) !important; }
+.setting-item-control input.ontomark-invalid { border-color: var(--text-error); }

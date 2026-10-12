@@ -1,6 +1,6 @@
 // Worker entry. Instantiates the engine synchronously from the bytes the host
 // transferred (never by URL) and runs the shared message loop.
-import { initSync, WasmEngine } from "./generated/web/ontomark_wasm.js";
+import { initSync, WasmEngine } from "./generated/web/ontomark_wasm";
 import type { HostToWorker, WorkerToHost } from "./protocol";
 import { createWorkerCore } from "./worker-core";
 

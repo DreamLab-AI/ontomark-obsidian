@@ -78,9 +78,18 @@ interface Pending {
 
 const CLASSIFY_CHANNEL = "classify";
 
+/**
+ * The window whose timers we should use. Obsidian's `activeWindow` keeps a
+ * popout window's timers on that window; under Node (tests) there is no
+ * window, and `globalThis` carries the same functions.
+ */
+function timerHost(): Pick<Window, "setTimeout" | "clearTimeout"> {
+  return typeof activeWindow !== "undefined" ? activeWindow : (globalThis as unknown as Window);
+}
+
 const defaultTimers: Timers = {
-  set: (fn, ms) => setTimeout(fn, ms),
-  clear: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+  set: (fn, ms) => timerHost().setTimeout(fn, ms),
+  clear: (h) => timerHost().clearTimeout(h as number),
 };
 
 export class OntomarkClient {
