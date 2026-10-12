@@ -29,3 +29,15 @@ The plugin's manifest says "Offline", its README says it makes no network reques
 ## Consequences
 
 Users who never configure an endpoint see no change. Users who do get a reviewed, evidence-backed proposal step with no second parser, identity scheme or reasoner in the plugin. Mobile remains unsupported. Ontology growth (new classes or properties) is out of scope here as it is in the core.
+
+## Amendment (2026-10-12): redirects and the one-destination promise
+
+Obsidian's `requestUrl` follows HTTP redirects and exposes neither the final URL nor a
+way to refuse them. The one-destination guarantee therefore rests on the endpoint
+contract rather than on the transport: the setting must be an absolute `http(s)` URL
+with no embedded credentials or fragment (`endpointProblem` in `src/ingest-transport.ts`;
+checked in the settings tab and again before every run), and a 3xx answer is treated as
+`model_unavailable` instead of being followed. A host that redirects is a misconfiguration
+the user is told to fix by typing the final URL. The bundle check guards `requestUrl` and
+`request` call sites; it is a guard against honest mistakes, not a proof against a
+deliberately obfuscated call, and this record says so.

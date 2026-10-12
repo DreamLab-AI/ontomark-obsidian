@@ -85,6 +85,9 @@ async function complete(endpoint: string, key: string, body: string): Promise<st
       }),
       timeout,
     ]);
+    if (res.status >= 300 && res.status < 400) {
+      throw unavailable(`HTTP ${res.status}: the endpoint redirected; point the setting at the final URL`);
+    }
     if (res.status < 200 || res.status >= 300) throw unavailable(`HTTP ${res.status}`);
     const parsed = res.json as { choices?: { message?: { content?: unknown } }[] } | undefined;
     const content = parsed?.choices?.[0]?.message?.content;
@@ -105,6 +108,28 @@ async function complete(endpoint: string, key: string, body: string): Promise<st
 /** Set by the host to stop a run between chunks: on unload, or on a user cancel. */
 export interface AbortToken {
   aborted: boolean;
+}
+
+/**
+ * Why a URL can be refused as an ingest endpoint, or `null` if it is usable.
+ *
+ * Obsidian's `requestUrl` follows redirects and reports neither the final
+ * URL nor a way to refuse them, so the "exactly one destination" promise
+ * rests on the endpoint itself: it must be an absolute `http(s)` URL with no
+ * embedded credentials, and the host must answer directly. A 3xx reply is
+ * treated as unavailable (see `callModel`) rather than followed.
+ */
+export function endpointProblem(endpoint: string): string | null {
+  let u: URL;
+  try {
+    u = new URL(endpoint);
+  } catch {
+    return "the endpoint is not an absolute URL";
+  }
+  if (u.protocol !== "https:" && u.protocol !== "http:") return "the endpoint must use http or https";
+  if (u.username || u.password) return "the endpoint must not embed credentials";
+  if (u.hash) return "the endpoint must not have a #fragment";
+  return null;
 }
 
 export async function callModel(

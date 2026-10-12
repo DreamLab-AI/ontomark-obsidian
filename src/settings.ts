@@ -1,4 +1,5 @@
 import { PluginSettingTab, Setting } from "obsidian";
+import { endpointProblem } from "./ingest-transport";
 import type { App } from "obsidian";
 import type { ProfileId } from "./protocol";
 import type OntomarkPlugin from "./main";
@@ -91,7 +92,11 @@ export class OntomarkSettingTab extends PluginSettingTab {
       .setDesc("Full address of an OpenAI-compatible chat-completions endpoint. Empty keeps the feature off.")
       .addText((t) =>
         t.setValue(this.plugin.settings.ingestEndpoint).onChange(async (v) => {
-          this.plugin.settings.ingestEndpoint = v.trim();
+          const trimmed = v.trim();
+          const problem = trimmed ? endpointProblem(trimmed) : null;
+          t.inputEl.toggleClass("ontomark-invalid", problem !== null);
+          t.inputEl.title = problem ?? "";
+          this.plugin.settings.ingestEndpoint = trimmed;
           await this.plugin.saveSettings();
         }),
       );

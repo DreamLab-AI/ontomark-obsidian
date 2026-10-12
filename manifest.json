@@ -1,9 +1,9 @@
 {
   "id": "ontomark",
   "name": "Ontomark",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "minAppVersion": "1.5.0",
-  "description": "Ontologies in Markdown: index typed notes, run local reasoning and SPARQL, and apply reviewed frontmatter edits. Offline; desktop only for now.",
+  "description": "Ontologies in Markdown: index typed notes, run local reasoning and SPARQL, apply reviewed frontmatter edits, and (optionally) extract facts with a model you point it at. Offline by default; one endpoint, only when you run the command. Desktop only for now.",
   "author": "DreamLab AI",
   "isDesktopOnly": true
 }

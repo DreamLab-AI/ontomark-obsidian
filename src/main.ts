@@ -13,7 +13,7 @@ import { QUERY_VIEW, QueryView } from "./views/query-view";
 import { GRAPH_VIEW, GraphView } from "./views/graph-view";
 import { confirmWithDiff } from "./views/diff-modal";
 import { confirmIngest } from "./views/ingest-modal";
-import { callModel, type AbortToken } from "./ingest-transport";
+import { callModel, endpointProblem, type AbortToken } from "./ingest-transport";
 
 export { ENTITY_VIEW, QUERY_VIEW, GRAPH_VIEW };
 export type { OntomarkSettings };
@@ -311,6 +311,11 @@ export default class OntomarkPlugin extends Plugin {
     const { ingestEndpoint, ingestModel } = this.settings;
     if (!ingestEndpoint) {
       new Notice("Ontomark: set an ingest endpoint in settings first.");
+      return;
+    }
+    const problem = endpointProblem(ingestEndpoint);
+    if (problem) {
+      new Notice(`Ontomark: ${problem}.`);
       return;
     }
     const key = this.ingestKey;
