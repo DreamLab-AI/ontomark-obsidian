@@ -86,13 +86,13 @@ Under the plugin sits [Ontomark](https://github.com/DreamLab-AI/ontomark), a Rus
 
 ## How it does on a real corpus
 
-The author's main vault is a public knowledge graph of **8,446 typed notes** (AI, governance, XR and more) kept to a stricter frontmatter spec, the VisionFlow corpus contract: every page has a stable resource IRI, `is-a` parents, a public gate and provenance. The plugin's optional **Estate corpus** profile reads that spec directly. Running the v0.2.0 engine the plugin ships over the whole vault, on an ordinary laptop (Intel i7-1165G7, 16 GB, Obsidian 1.14.4):
+My own main vault is a public knowledge graph of **8,446 typed notes** (AI, governance, XR and more) kept to a stricter frontmatter spec, the VisionFlow corpus contract: every page has a stable resource IRI, `is-a` parents, a public gate and provenance. The plugin's optional **Estate corpus** profile reads that spec directly. Running the v0.2.0 engine the plugin ships over the whole vault, on an ordinary laptop (Intel i7-1165G7, 16 GB, Obsidian 1.14.4):
 
 - all 8,446 notes indexed as entities, **278k triples in about 2 s**;
 - full classification in **about 1.5 s**, complete, no unsatisfiable classes, about 58k subclass links in the combined graph;
 - and real problems surfaced in the data: **935 ambiguous parent links** (a `[[Decentralized Autonomous Organization]]` that matches both *DAO* and the full-name note), **936 parents pointing at pages that do not exist**, and **42 accidental `is-a` cycles** that quietly make two classes one (*automation ≡ smart-home* was the author's favourite). Cleanup is in progress.
 
-The engine's own README reports the same corpus through its command-line build, which applies a different public gate and so counts 9,244 classes; the two figures measure different things, not a disagreement.
+Ontomark's engine README reports the same corpus through its command-line build, which applies a different public gate and so counts 9,244 classes; the two figures measure different things, not a disagreement.
 
 ## Install
 
