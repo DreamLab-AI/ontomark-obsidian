@@ -13,7 +13,7 @@ import { QUERY_VIEW, QueryView } from "./views/query-view";
 import { GRAPH_VIEW, GraphView } from "./views/graph-view";
 import { confirmWithDiff } from "./views/diff-modal";
 import { confirmIngest } from "./views/ingest-modal";
-import { callModel } from "./ingest-transport";
+import { callModel, type AbortToken } from "./ingest-transport";
 
 export { ENTITY_VIEW, QUERY_VIEW, GRAPH_VIEW };
 export type { OntomarkSettings };
@@ -57,6 +57,8 @@ export default class OntomarkPlugin extends Plugin {
   ready!: Promise<void>;
   /** Assisted-ingest API key: memory only, never in data.json, cleared on unload. */
   ingestKey = "";
+  /** The extraction in flight, if any; `onunload` aborts it. */
+  private ingestRun: AbortToken | null = null;
 
   private workerUrl = "";
   private listeners = new Set<(e: ChangeEvent) => void>();
@@ -93,6 +95,10 @@ export default class OntomarkPlugin extends Plugin {
 
   override onunload(): void {
     this.autoClassify.cancel();
+    // Stop any extraction at its next chunk boundary; the copied key in the
+    // running closure must not be used again after this point.
+    if (this.ingestRun) this.ingestRun.aborted = true;
+    this.ingestRun = null;
     this.ingestKey = "";
     this.apiUnsubscribe?.();
     this.apiUnsubscribe = null;
@@ -312,16 +318,36 @@ export default class OntomarkPlugin extends Plugin {
       new Notice("Ontomark: enter the API key for this session in settings.");
       return;
     }
+    // One run at a time: a second invocation while chunks are in flight would
+    // double the calls (and the bill) and open two modals.
+    if (this.ingestRun) {
+      new Notice("Ontomark: an extraction is already running.");
+      return;
+    }
+    const run: AbortToken = { aborted: false };
+    this.ingestRun = run;
     void this.guard(async () => {
-      await this.ready;
-      const { request } = await this.api.ingestPlan(file.path);
-      const responses = await callModel(ingestEndpoint, key, ingestModel, request, (m) => new Notice(`Ontomark: ${m}.`));
-      const result = await this.api.ingestAccept(file.path, request, responses);
-      if (!result.preview) {
-        await confirmIngest(this.app, result);
-        return;
+      try {
+        await this.ready;
+        const { request } = await this.api.ingestPlan(file.path);
+        const responses = await callModel(
+          ingestEndpoint,
+          key,
+          ingestModel,
+          request,
+          (m) => new Notice(`Ontomark: ${m}.`),
+          run,
+        );
+        if (run.aborted) return;
+        const result = await this.api.ingestAccept(file.path, request, responses);
+        if (!result.preview) {
+          await confirmIngest(this.app, result);
+          return;
+        }
+        this.announce(await this.api.applyPatch(result.preview, () => confirmIngest(this.app, result)));
+      } finally {
+        if (this.ingestRun === run) this.ingestRun = null;
       }
-      this.announce(await this.api.applyPatch(result.preview, () => confirmIngest(this.app, result)));
     });
   }
 

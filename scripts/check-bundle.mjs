@@ -17,6 +17,12 @@ const forbidden = [
   ["import.meta", /import\.meta/],
   ["node network modules", /require\(\s*["'](?:node:)?(?:https?|net|tls|dns|dgram|http2|child_process)["']\s*\)/],
   ["electron net", /\bnet\.request\b/],
+  // Obsidian exports `request` beside `requestUrl`. After bundling, an
+  // external-module call looks like `(0, X.request)(…)` or `X.request(…)`.
+  // `\.request\b` alone would flag `this.request` in the views, so the
+  // call-shaped forms are matched instead.
+  ["obsidian request()", /\(0,\s*[\w$]+\.request\)\s*\(/],
+  ["obsidian request() (direct)", /\b[\w$]+\.request\s*\(/],
 ];
 const findings = [];
 for (const [name, re] of forbidden) {

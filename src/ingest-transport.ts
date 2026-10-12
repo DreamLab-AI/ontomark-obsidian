@@ -102,12 +102,18 @@ async function complete(endpoint: string, key: string, body: string): Promise<st
  * through `onDrop`); an unreachable endpoint or non-2xx status throws
  * `model_unavailable`.
  */
+/** Set by the host to stop a run between chunks: on unload, or on a user cancel. */
+export interface AbortToken {
+  aborted: boolean;
+}
+
 export async function callModel(
   endpoint: string,
   key: string,
   model: string,
   request: ModelRequest,
   onDrop?: DropReporter,
+  abort?: AbortToken,
 ): Promise<ModelResponse[]> {
   if (request.chunks.length > MAX_CHUNKS) {
     throw new OntomarkError(
@@ -117,6 +123,11 @@ export async function callModel(
   }
   const responses: ModelResponse[] = [];
   for (const chunk of request.chunks) {
+    // Checked before every request so an unload or cancel stops the run at the
+    // next chunk boundary and no further bearer-authenticated call goes out.
+    if (abort?.aborted) {
+      throw new OntomarkError("cancelled", "extraction cancelled; nothing was applied");
+    }
     const body = JSON.stringify({
       ...(model ? { model } : {}),
       messages: [
