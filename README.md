@@ -137,7 +137,7 @@ Only notes with `type: class`, `type: individual` or `type: property` become ont
 | `instance-of` | Class of an individual |
 | `domain`, `range`, `subproperty-of` | Property description and hierarchy |
 
-Write relations as a list of quoted links: `subclass-of: ["[[Animal]]"]`, or one `- "[[Animal]]"` per line. Ontomark reads a single quoted link too, but Obsidian stores that as text, so list filters in Bases such as `subclass-of.contains(this.file.asLink())` skip it; the panel notes it as info. An unquoted `[[Animal]]` is read by YAML as a nested list, so quote it.
+Write relations as a list of quoted links: `subclass-of: ["[[Animal]]"]`, or one `- "[[Animal]]"` per line. Ontomark reads a single quoted link too, but Obsidian stores that as text, so list filters in Bases such as `note["subclass-of"].contains(this.file.asLink())` skip it; the panel notes it as info. (Bases needs the `note["…"]` form for a hyphenated property: a bare `subclass-of.contains(…)` is read as subtraction and matches nothing.) An unquoted `[[Animal]]` is read by YAML as a nested list, so quote it.
 
 ![The ontology panel's diagnostics: an error, a warning, and the info note for a relation written as a single value](docs/screenshots/ontology-panel-diagnostics.png)
 
