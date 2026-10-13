@@ -31,7 +31,11 @@ try {
   const trackedTypes=existsSync(typesPath) ? readFileSync(typesPath,'utf8') : null;
   rmSync(out,{recursive:true,force:true});mkdirSync(out,{recursive:true});
   execFileSync('tar',['-xzf',archive,'-C',out],{stdio:'inherit'});
-  const fetchedTypes=readFileSync(typesPath,'utf8');
+  // wasm-bindgen opens the declaration with blanket `tslint-disable`/`eslint-disable`
+  // directives; linters that forbid unlimited disables reject them, and the file
+  // needs no exemptions, so they are removed before the file is compared or kept.
+  const fetchedTypes=readFileSync(typesPath,'utf8').replace(/^\/\* (?:tslint:disable|eslint-disable) \*\/\n/gm,'').replace(/^\n+/,'');
+  writeFileSync(typesPath,fetchedTypes);
   if (trackedTypes !== null && trackedTypes !== fetchedTypes) {
     const message='src/generated/web/ontomark_wasm.d.ts changed with this engine pin; commit the fetched file';
     if (process.env.CI) throw new Error(message);

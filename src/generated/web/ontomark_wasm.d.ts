@@ -1,6 +1,3 @@
-/* tslint:disable */
-/* eslint-disable */
-
 /**
  * The engine as a JavaScript class.
  *
