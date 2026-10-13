@@ -1,10 +1,10 @@
 // Worker entry. Instantiates the engine synchronously from the bytes the host
 // transferred (never by URL) and runs the shared message loop.
-import type { InitOutput, SyncInitInput } from "./generated/web/ontomark_wasm";
-import * as glue from "./generated/web/ontomark_wasm";
-
-const initSync: (module: { module: SyncInitInput }) => InitOutput = glue.initSync;
-const WasmEngine: typeof glue.WasmEngine = glue.WasmEngine;
+//
+// `src/generated/` is fetched by the build from the pinned engine release and
+// is not tracked, except the glue's type declaration, which is, so that the
+// types here are real for anyone reading the repository without a build.
+import { initSync, WasmEngine } from "./generated/web/ontomark_wasm";
 import type { HostToWorker, WorkerToHost } from "./protocol";
 import { createWorkerCore } from "./worker-core";
 

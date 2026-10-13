@@ -466,6 +466,17 @@ class PluginSettingTab {
     this.plugin = plugin;
     this.containerEl = new FakeEl("div");
   }
+  /** 1.13+ declarative API; the shim models a pre-1.13 host, so display() is what renders. */
+  getSettingDefinitions() {
+    return [];
+  }
+  getControlValue(key) {
+    return this.plugin.settings?.[key];
+  }
+  async setControlValue(key, value) {
+    this.plugin.settings[key] = value;
+    await this.plugin.saveData(this.plugin.settings);
+  }
 }
 
 class DropdownComponent {
@@ -521,6 +532,10 @@ class TextComponent {
     this.inputEl = el.createEl("input", { attr: { type: "text" } });
     this._onChange = null;
   }
+  setPlaceholder(p) {
+    this.inputEl.placeholder = p;
+    return this;
+  }
   setValue(v) {
     this.inputEl.value = String(v);
     return this;
@@ -553,6 +568,10 @@ class Setting {
   }
   setHeading() {
     this.settingEl.addClass("setting-item-heading");
+    return this;
+  }
+  setClass(c) {
+    this.settingEl.addClass(c);
     return this;
   }
   addDropdown(cb) {
@@ -614,7 +633,15 @@ function requestUrl(req) {
   return Promise.resolve().then(() => requestUrlHost.impl(req));
 }
 
+/** The shim models the manifest's floor, before the declarative settings API. */
+const apiVersion = "1.7.2";
+function requireApiVersion(_version) {
+  return false;
+}
+
 module.exports = {
+  apiVersion,
+  requireApiVersion,
   requestUrl,
   requestUrlHost,
   App,

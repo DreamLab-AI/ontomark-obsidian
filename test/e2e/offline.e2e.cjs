@@ -275,6 +275,28 @@ async function main() {
   check("ingest: no endpoint -> refusing Notice naming the setting, nothing sent", ingestNotices.some((n) => n.includes("set an ingest endpoint in settings")) && runtime.attempts.length === 0, { ingestNotices, attempts: runtime.attempts });
   check("ingest: endpoint default is empty and the key is not persisted", plugin.settings.ingestEndpoint === "" && plugin.ingestKey === "" && !fs.readFileSync(path.join(pluginDir, "data.json"), "utf8").includes("ingestKey"));
 
+  // ---- declarative settings (Obsidian 1.13+ API): one definition list behind both renderers ----
+  const defs = tab.getSettingDefinitions();
+  const flatDefs = defs.flatMap((d) => (d.type === "group" ? d.items : [d]));
+  const controlKeys = flatDefs.filter((d) => d.control).map((d) => d.control.key).sort();
+  check("settings: declarative definitions cover every persisted setting and nothing else", JSON.stringify(controlKeys) === JSON.stringify(Object.keys(plugin.settings).sort()), { controlKeys, settings: Object.keys(plugin.settings) });
+  check("settings: the session API key is a render item, not a persisted control", !controlKeys.includes("ingestKey") && flatDefs.some((d) => typeof d.render === "function" && /API key/.test(d.name)));
+  const endpointDef = flatDefs.find((d) => d.control?.key === "ingestEndpoint");
+  const endpointVerdicts = { credentials: await endpointDef.control.validate("https://user:pw@host/v1"), fragment: await endpointDef.control.validate("https://host/v1#x"), ok: await endpointDef.control.validate(" https://host/v1/chat/completions "), empty: await endpointDef.control.validate("") };
+  check("settings: endpoint validate rejects credentials and fragments, accepts a clean URL and empty", typeof endpointVerdicts.credentials === "string" && typeof endpointVerdicts.fragment === "string" && endpointVerdicts.ok === undefined && endpointVerdicts.empty === undefined, endpointVerdicts);
+  const limitDef = flatDefs.find((d) => d.control?.key === "queryLimit");
+  const limitBefore = plugin.settings.queryLimit;
+  await tab.setControlValue("queryLimit", "100");
+  check("settings: row limit is a bounded dropdown and is stored as a number", limitDef.control.type === "dropdown" && Object.keys(limitDef.control.options).join() === "100,1000,10000" && plugin.settings.queryLimit === 100 && tab.getControlValue("queryLimit") === "100", { stored: plugin.settings.queryLimit });
+  await tab.setControlValue("queryLimit", String(limitBefore));
+  await tab.setControlValue("autoClassify", false);
+  const persistedOff = JSON.parse(fs.readFileSync(path.join(pluginDir, "data.json"), "utf8")).autoClassify;
+  await tab.setControlValue("autoClassify", true);
+  check("settings: setControlValue persists through the plugin's own store", persistedOff === false && plugin.settings.autoClassify === true, { persistedOff });
+  await tab.setControlValue("ingestModel", "  gpt-x  ");
+  check("settings: setControlValue trims text and ignores unknown keys", plugin.settings.ingestModel === "gpt-x" && (await tab.setControlValue("ingestKey", "leak"), plugin.settings.ingestKey === undefined && plugin.ingestKey === ""));
+  await tab.setControlValue("ingestModel", "");
+
   // ---- unload / reload ----
   const workersBefore = runtime.liveWorkers();
   plugin.unload();

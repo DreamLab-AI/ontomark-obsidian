@@ -1,5 +1,8 @@
 node_modules
 dist/
-src/generated/
+src/generated/*
+!src/generated/web/
+src/generated/web/*
+!src/generated/web/ontomark_wasm.d.ts
 .offline/
 release/

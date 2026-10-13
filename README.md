@@ -115,7 +115,7 @@ Ontomark is in the community directory: **Settings → Community plugins → Bro
 
 To install by hand instead:
 
-1. Download [ontomark-obsidian-0.3.0.zip](https://github.com/DreamLab-AI/ontomark-obsidian/releases/download/0.3.0/ontomark-obsidian-0.3.0.zip) from the [0.3.0 release](https://github.com/DreamLab-AI/ontomark-obsidian/releases/tag/0.3.0).
+1. Download [ontomark-obsidian-0.3.1.zip](https://github.com/DreamLab-AI/ontomark-obsidian/releases/download/0.3.1/ontomark-obsidian-0.3.1.zip) from the [0.3.1 release](https://github.com/DreamLab-AI/ontomark-obsidian/releases/tag/0.3.1).
 2. Extract it into `<vault>/.obsidian/plugins/`; it creates an `ontomark` folder.
 3. **Settings → Community plugins**, enable Ontomark, reload if Obsidian was open.
 

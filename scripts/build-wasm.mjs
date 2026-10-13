@@ -2,7 +2,7 @@
 // archive and its digest explicitly; production builds always use engine.json.
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdtempSync, rmSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdtempSync, rmSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -24,8 +24,19 @@ try {
   const archive=join(temporary,'engine.tar.gz');writeFileSync(archive,bytes);
   const paths=execFileSync('tar',['-tzf',archive],{encoding:'utf8'}).trim().split('\n');
   if (paths.some(p=>p.startsWith('/') || p.split('/').includes('..'))) throw new Error('Unsafe engine archive path');
-  const out=join(root,'src/generated');rmSync(out,{recursive:true,force:true});mkdirSync(out,{recursive:true});
+  const out=join(root,'src/generated');
+  // The glue's type declaration is tracked so the repository type-checks without a build;
+  // an engine repin that changes it must commit the new file (CI fails on drift).
+  const typesPath=join(out,'web/ontomark_wasm.d.ts');
+  const trackedTypes=existsSync(typesPath) ? readFileSync(typesPath,'utf8') : null;
+  rmSync(out,{recursive:true,force:true});mkdirSync(out,{recursive:true});
   execFileSync('tar',['-xzf',archive,'-C',out],{stdio:'inherit'});
+  const fetchedTypes=readFileSync(typesPath,'utf8');
+  if (trackedTypes !== null && trackedTypes !== fetchedTypes) {
+    const message='src/generated/web/ontomark_wasm.d.ts changed with this engine pin; commit the fetched file';
+    if (process.env.CI) throw new Error(message);
+    console.warn(`warning: ${message}`);
+  }
   const receipt=JSON.parse(readFileSync(join(out,'engine-manifest.json'),'utf8'));
   if (!local && receipt.source !== pin.source) throw new Error('Engine source receipt does not match pin');
   console.log(`Verified Ontomark engine ${receipt.source} (${expected})`);
