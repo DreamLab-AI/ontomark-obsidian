@@ -117,7 +117,7 @@ export interface HostSpan {
 export interface Diagnostic {
   path: string;
   code: string;
-  severity: "error" | "warning";
+  severity: "info" | "warning" | "error";
   message: string;
   span: HostSpan | null;
 }

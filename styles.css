@@ -15,6 +15,7 @@
 .ontomark-diagnostic { font-size: var(--font-ui-smaller); }
 .ontomark-error.ontomark-diagnostic, .ontomark-diagnostic.ontomark-error { color: var(--color-red); }
 .ontomark-warning.ontomark-diagnostic { color: var(--text-muted); }
+.ontomark-info.ontomark-diagnostic { color: var(--text-faint); }
 .ontomark-query-input { width: 100%; font-family: var(--font-monospace); font-size: var(--font-ui-smaller); resize: vertical; }
 .ontomark-ask { font-weight: var(--font-bold); }
 .ontomark-table { border-collapse: collapse; width: 100%; margin-top: var(--size-4-2); }

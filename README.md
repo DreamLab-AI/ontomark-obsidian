@@ -135,6 +135,8 @@ Only notes with `type: class`, `type: individual` or `type: property` become ont
 | `instance-of` | Class of an individual |
 | `domain`, `range`, `subproperty-of` | Property description and hierarchy |
 
+Write relations as a list of quoted links: `subclass-of: ["[[Animal]]"]`, or one `- "[[Animal]]"` per line. Ontomark reads a single quoted link too, but Obsidian stores that as text, so list filters in Bases such as `subclass-of.contains(this.file.asLink())` skip it; the panel notes it as info. An unquoted `[[Animal]]` is read by YAML as a nested list, so quote it.
+
 Other keys are kept as annotations. The default **Generic** profile works in any vault; the optional **Estate corpus** profile is for corpora that follow the VisionFlow contract.
 
 ## Further afield
