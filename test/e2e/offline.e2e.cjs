@@ -76,6 +76,7 @@ async function main() {
   globalThis.Worker = runtime.BlobWorker;
   // Obsidian's renderer global for the window in use; timers are scoped to it.
   globalThis.activeWindow = globalThis;
+  if (typeof globalThis.window === "undefined") globalThis.window = globalThis;
   const obsidian = require("./obsidian-shim.cjs");
   // The tripwire also covers the plugin's one network primitive: any call is recorded as an attempt.
   obsidian.requestUrlHost.impl = async (req) => {
@@ -175,6 +176,35 @@ async function main() {
   }
   check("SPARQL UPDATE / SERVICE / FROM refused with codes", refusals.update === "update_forbidden" && refusals.service === "service_forbidden" && refusals.from === "dataset_clause", refusals);
   check("queries changed no file", hashTree(vaultDir) === hashBeforeQueries);
+
+  // ---- in-note `ontomark-sparql` blocks (EXP-13; after Dot Triples, ADR-OBS-004) ----
+  const processor = app.codeBlockProcessors.get("ontomark-sparql");
+  check("an ontomark-sparql code block processor is registered", typeof processor === "function");
+  const renderBlock = async (source, sourcePath) => {
+    const el = new obsidian.FakeEl("div");
+    let child = null;
+    await processor(source, el, { sourcePath, addChild: (c) => { child = c; void c.load(); } });
+    await child.ready;
+    return { el, child };
+  };
+  const rdfPrefixes = "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n";
+  const thisBlock = await renderBlock(`# dataset: combined\n${rdfPrefixes}SELECT ?t WHERE { __THIS__ rdf:type ?t } ORDER BY ?t`, "People/Rex.md");
+  check("block: __THIS__ is the note's entity and the directive picks the dataset", thisBlock.child.lastResult?.rows?.length === rexRows, { rows: thisBlock.child.lastResult?.rows?.length, error: thisBlock.child.lastError });
+  check("block renders a results table in place", thisBlock.el.find((e) => e.tagName === "TABLE") !== null && thisBlock.el.hasClass("ontomark-block"), { table: thisBlock.el.find((e) => e.tagName === "TABLE") !== null, classes: [...thisBlock.el.classes] });
+  const linkBlock = await renderBlock(`${rdfPrefixes}SELECT ?p WHERE { [[Rex]] ?p [[Dog|the dog]] }`, "Welcome.md");
+  check("block: [[links]] resolve across folders to entity IRIs", linkBlock.child.lastResult?.rows?.some((r) => r.p?.value?.endsWith("#type")) === true, { rows: linkBlock.child.lastResult?.rows, error: linkBlock.child.lastError });
+  const plainBlock = await renderBlock("SELECT ?p WHERE { __THIS__ ?p ?o }", "Welcome.md");
+  check("block: __THIS__ in a plain note is refused with a reason, not run", plainBlock.child.lastResult === null && /not an ontology entity/.test(plainBlock.child.lastError ?? ""), plainBlock.child.lastError);
+  const missingBlock = await renderBlock("SELECT ?p WHERE { [[Nobody]] ?p ?o }", "People/Rex.md");
+  check("block: an unresolved [[link]] is named in the error", /\[\[Nobody\]\]/.test(missingBlock.child.lastError ?? ""), missingBlock.child.lastError);
+  const quotedBlock = await renderBlock(`${rdfPrefixes}SELECT ?x WHERE { BIND("[[Nobody]] and __THIS__" AS ?x) }`, "Welcome.md");
+  check("block: references inside string literals are left alone", quotedBlock.child.lastResult?.rows?.[0]?.x?.value === "[[Nobody]] and __THIS__", { rows: quotedBlock.child.lastResult?.rows, error: quotedBlock.child.lastError });
+  thisBlock.child.unload();
+  linkBlock.child.unload();
+  plainBlock.child.unload();
+  missingBlock.child.unload();
+  quotedBlock.child.unload();
+  check("blocks changed no file", hashTree(vaultDir) === hashBeforeQueries);
 
   // ---- guarded patch with diff preview (applied) ----
   const welcomeBefore = fs.readFileSync(path.join(vaultDir, "Welcome.md"), "utf8");

@@ -78,11 +78,11 @@ interface Pending {
 
 const CLASSIFY_CHANNEL = "classify";
 
-// Timers belong to the active window so a popout window keeps its own
-// (Obsidian's `activeWindow`). Tests run under Node and inject `timers`.
+// Timers are the window's, as the directory review asks; a popout keeps its own.
+// Tests run under Node and inject `timers`.
 const defaultTimers: Timers = {
-  set: (fn, ms) => activeWindow.setTimeout(fn, ms),
-  clear: (h) => activeWindow.clearTimeout(h),
+  set: (fn, ms) => window.setTimeout(fn, ms),
+  clear: (h) => window.clearTimeout(h),
 };
 
 export class OntomarkClient {

@@ -47,6 +47,7 @@ async function main() {
   runtime.installTripwire();
   globalThis.Worker = runtime.BlobWorker;
   globalThis.activeWindow = globalThis;
+  if (typeof globalThis.window === "undefined") globalThis.window = globalThis;
   const obsidian = require("./obsidian-shim.cjs");
   const manifest = JSON.parse(read(".obsidian/plugins/ontomark/manifest.json"));
 

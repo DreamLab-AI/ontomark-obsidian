@@ -40,3 +40,7 @@
 
 /* An ingest endpoint the plugin will refuse to call. */
 .setting-item-control input.ontomark-invalid { border-color: var(--text-error); }
+
+/* An in-note `ontomark-sparql` block: the same table as the query view, inside reading view. */
+.ontomark-block { margin: var(--size-4-2) 0; }
+.ontomark-block .ontomark-table { margin-top: 0; }

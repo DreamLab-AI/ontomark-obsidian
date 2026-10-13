@@ -12,6 +12,7 @@ import type {
   ClassifyDone,
   DatasetSelection,
   DescribeResult,
+  Entity,
   EntityKind,
   FileText,
   IndexResult,
@@ -77,6 +78,8 @@ export class OntomarkApi {
   private classifying = false;
   private lastClassified: number | null = null;
   private lastIndex: IndexResult | null = null;
+  /** Generation `lastIndex` describes; `-1` until the first index. */
+  private indexGeneration = -1;
 
   constructor(
     readonly client: OntomarkClient,
@@ -138,8 +141,23 @@ export class OntomarkApi {
 
   /** @param channel pass one per consumer (e.g. a view) for latest-wins semantics. */
   async index(channel?: string): Promise<IndexResult> {
+    const generation = this.client.generation;
     this.lastIndex = await this.client.index(channel);
+    this.indexGeneration = generation;
     return this.lastIndex;
+  }
+
+  /** The entities at the current generation, re-fetched only when the index has moved. */
+  async entities(): Promise<Entity[]> {
+    if (this.lastIndex === null || this.indexGeneration !== this.client.generation) {
+      await this.index("api-entities");
+    }
+    return this.lastIndex?.entities ?? [];
+  }
+
+  /** The entity whose note is at `path`, or `undefined` when that note is not an ontology entity. */
+  async entityForPath(path: string): Promise<Entity | undefined> {
+    return (await this.entities()).find((e) => e.path === path);
   }
 
   describe(iri: string): Promise<DescribeResult> {

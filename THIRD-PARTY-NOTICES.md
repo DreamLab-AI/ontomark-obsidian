@@ -4,6 +4,10 @@ This distribution includes software by the upstream authors listed below. The or
 
 This file covers the portable rc1 engine source `21cd9ffd7b08317248afb4e06b74b650290de5b4` and the standalone plugin’s build/test tool lock at `93b6a05`. See the core repository’s `docs/UPSTREAMS.md` for the full inventory and audit method.
 
+## Method attribution: Dot Triples (no source included)
+
+The `ontomark-sparql` code block (`src/sparql-rewrite.ts`, `src/sparql-block.ts`) follows the `dot-sparql` block of Cristian Vasquez's Dot Triples plugin, https://github.com/cristianvasquez/dot-triples-plugin (MIT), and the `__THIS__` and `[[Note]]` tokens are his. The implementation is independent and no source from that project is included, so no licence text is reproduced here; `docs/adr/ADR-OBS-004-in-note-sparql-after-dot-triples.md` carries the credit.
+
 ## MPL source availability
 
 The embedded engine uses these unchanged libraries under the Mozilla Public License 2.0. Their complete source packages, with the original notices, are available at:

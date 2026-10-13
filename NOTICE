@@ -18,3 +18,9 @@ Whelk/Whelk-rs and Oxigraph attribution and complete dependency licence texts
 are preserved in THIRD-PARTY-NOTICES.md. The shared graph adapts Narrative
 Goldmine behaviour: https://github.com/jjohare/visionGraph .
 Sources: https://github.com/DreamLab-AI/ontomark
+
+## Method attribution
+
+The `ontomark-sparql` in-note query block follows the `dot-sparql` block of
+Cristian Vasquez's Dot Triples plugin (MIT), https://github.com/cristianvasquez/dot-triples-plugin .
+No source was copied; see THIRD-PARTY-NOTICES.md and docs/adr/ADR-OBS-004.

@@ -71,7 +71,7 @@ function unavailable(detail: string): OntomarkError {
 async function complete(endpoint: string, key: string, body: string): Promise<string> {
   let timer: number | undefined;
   const timeout = new Promise<never>((_, reject) => {
-    timer = activeWindow.setTimeout(() => reject(unavailable(`no reply within ${TIMEOUT_MS / 1000} s`)), TIMEOUT_MS);
+    timer = window.setTimeout(() => reject(unavailable(`no reply within ${TIMEOUT_MS / 1000} s`)), TIMEOUT_MS);
   });
   try {
     const res = await Promise.race([
@@ -95,7 +95,7 @@ async function complete(endpoint: string, key: string, body: string): Promise<st
   } catch (err) {
     throw err instanceof OntomarkError ? err : unavailable(err instanceof Error ? err.message : String(err));
   } finally {
-    activeWindow.clearTimeout(timer);
+    window.clearTimeout(timer);
   }
 }
 

@@ -327,6 +327,19 @@ class Workspace extends Events {
   }
 }
 
+/** Link resolution the way Obsidian does it for a bare `[[Name]]`: an exact path first, then a unique basename. */
+class MetadataCache {
+  constructor(app) {
+    this.app = app;
+  }
+  getFirstLinkpathDest(linkpath, _sourcePath) {
+    const exact = this.app.vault.getAbstractFileByPath(linkpath) ?? this.app.vault.getAbstractFileByPath(`${linkpath}.md`);
+    if (exact) return exact;
+    const hits = this.app.vault.getMarkdownFiles().filter((f) => f.basename === linkpath);
+    return hits.length === 1 ? hits[0] : (hits[0] ?? null);
+  }
+}
+
 class App {
   constructor(root) {
     this.vault = new Vault(root);
@@ -338,6 +351,8 @@ class App {
     this.notices = [];
     this.modals = [];
     this.onModalOpen = null;
+    this.codeBlockProcessors = new Map();
+    this.metadataCache = new MetadataCache(this);
   }
   /** Harness: run a registered command the way the palette does (fire-and-forget callback). */
   executeCommand(id) {
@@ -385,6 +400,19 @@ class Plugin extends Component {
   }
   addStatusBarItem() {
     return new FakeEl("div");
+  }
+  registerMarkdownCodeBlockProcessor(language, handler) {
+    this.app.codeBlockProcessors.set(language, handler);
+    this.register(() => this.app.codeBlockProcessors.delete(language));
+    return handler;
+  }
+}
+
+/** A component owned by a rendered Markdown element; `ctx.addChild` loads it. */
+class MarkdownRenderChild extends Component {
+  constructor(containerEl) {
+    super();
+    this.containerEl = containerEl;
   }
 }
 
@@ -594,6 +622,7 @@ module.exports = {
   Events,
   FakeEl,
   ItemView,
+  MarkdownRenderChild,
   Modal,
   Notice,
   Plugin,

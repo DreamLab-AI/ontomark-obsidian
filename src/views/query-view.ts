@@ -1,9 +1,9 @@
 import { ItemView } from "obsidian";
 import type { WorkspaceLeaf } from "obsidian";
 import { OntomarkError } from "../client";
-import type { DatasetSelection, QueryResult, WireTerm } from "../protocol";
+import type { DatasetSelection, QueryResult } from "../protocol";
 import type OntomarkPlugin from "../main";
-import { compactIri } from "./entity-view";
+import { renderQueryResult } from "./query-render";
 
 export const QUERY_VIEW = "ontomark-query";
 
@@ -15,12 +15,6 @@ SELECT ?class ?label WHERE {
 }
 ORDER BY ?label
 LIMIT 50`;
-
-function termText(t: WireTerm): { text: string; title?: string } {
-  if (t.type === "iri") return { text: compactIri(t.value), title: t.value };
-  if (t.type === "bnode") return { text: `_:${t.value}` };
-  return { text: t.value, title: t.lang ? `@${t.lang}` : t.datatype };
-}
 
 /** SPARQL query panel over the local, reasoned dataset. */
 export class QueryView extends ItemView {
@@ -97,7 +91,7 @@ export class QueryView extends ItemView {
         result = await this.plugin.api.query(sparql, dataset, limit, "query-view");
       }
       this.lastResult = result;
-      this.renderResult(result);
+      renderQueryResult(this.resultsEl, result);
     } catch (err) {
       const code = err instanceof OntomarkError ? err.code : "error";
       const message = err instanceof Error ? err.message : String(err);
@@ -105,45 +99,6 @@ export class QueryView extends ItemView {
       this.lastError = `${code}: ${message}`;
       this.resultsEl.empty();
       this.resultsEl.createDiv({ text: this.lastError, cls: "ontomark-error" });
-    }
-  }
-
-  private renderResult(r: QueryResult): void {
-    const out = this.resultsEl;
-    out.empty();
-    if (r.form === "ask") {
-      out.createDiv({ text: r.boolean ? "true" : "false", cls: "ontomark-ask" });
-      return;
-    }
-    const table = out.createEl("table", { cls: "ontomark-table" });
-    const head = table.createEl("tr");
-    const cell = (row: { createEl: HTMLElement["createEl"] }, t: WireTerm | undefined): void => {
-      if (!t) {
-        row.createEl("td", { text: "" });
-        return;
-      }
-      const { text, title } = termText(t);
-      row.createEl("td", { text, attr: title ? { title } : {} });
-    };
-    if (r.form === "select") {
-      for (const v of r.variables) head.createEl("th", { text: v });
-      for (const binding of r.rows) {
-        const tr = table.createEl("tr");
-        for (const v of r.variables) cell(tr, binding[v]);
-      }
-    } else {
-      for (const h of ["subject", "predicate", "object"]) head.createEl("th", { text: h });
-      for (const [s, p, o] of r.triples) {
-        const tr = table.createEl("tr");
-        cell(tr, s);
-        cell(tr, p);
-        cell(tr, o);
-      }
-    }
-    const count = r.form === "select" ? r.rows.length : r.triples.length;
-    out.createDiv({ text: `${count} row${count === 1 ? "" : "s"}`, cls: "ontomark-count" });
-    if (r.truncated) {
-      out.createDiv({ text: "Truncated: more results exist than the row limit allows.", cls: "ontomark-warning" });
     }
   }
 }

@@ -11,6 +11,7 @@ import type { OntomarkSettings } from "./settings";
 import { ENTITY_VIEW, EntityView } from "./views/entity-view";
 import { QUERY_VIEW, QueryView } from "./views/query-view";
 import { GRAPH_VIEW, GraphView } from "./views/graph-view";
+import { registerSparqlBlock } from "./sparql-block";
 import { confirmWithDiff } from "./views/diff-modal";
 import { confirmIngest } from "./views/ingest-modal";
 import { callModel, endpointProblem, type AbortToken } from "./ingest-transport";
@@ -83,6 +84,7 @@ export default class OntomarkPlugin extends Plugin {
     this.registerView(ENTITY_VIEW, (leaf) => new EntityView(leaf, this));
     this.registerView(QUERY_VIEW, (leaf) => new QueryView(leaf, this));
     this.registerView(GRAPH_VIEW, (leaf) => new GraphView(leaf, this));
+    registerSparqlBlock(this);
     this.addRibbonIcon("network", "Open ontology panel", () => {
       void this.openGraphView();
     });
