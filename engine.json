@@ -1,7 +1,7 @@
 {
   "repository": "DreamLab-AI/ontomark",
-  "tag": "v0.2.1",
-  "asset": "ontomark-engine-0.2.1.tar.gz",
-  "sha256": "29f034a36255bb0c7b1551f442fc5541a9a038da8f966f5ca0170815a7ed8978",
-  "source": "90effefefbf115f4acbbc27b96934af95433cf29"
+  "tag": "v0.2.2",
+  "asset": "ontomark-engine-0.2.2.tar.gz",
+  "sha256": "dfa8d34450e14c9062742e31308ba9386e06ab5b6e2599a947c45d9add29b90c",
+  "source": "150b42053dd9641163ec4d574c9b21e02c06009e"
 }

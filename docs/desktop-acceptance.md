@@ -45,7 +45,7 @@ Plugin source `46c3c66` (engine `v0.2.0`, source `8a3b6cc`, verified by the SHA-
 | Plan | `ingestPlan` on a real class note: one chunk, six class-appropriate keys (no `instance-of`), evidence-bearing note block. No network. |
 | Session key | Entered through settings; `data.json` provably does not contain it. Cleared on unload. |
 | One call, one destination | The stub logged exactly one request, to the typed URL verbatim, bearer present (`evidence/desktop-ingest-stub-requests.jsonl`). |
-| Modal | Diff adding `subclass-of: [[Animal]]`, the accepted fact with its grounding tier and quote, and two refusals named (`ungrounded` for an invented class, `evidence_not_found` for a quote not in the note). `screenshots/ingest-modal.png`. |
+| Modal | Diff adding `subclass-of:` with the block-list item `'[[Animal]]'` (the plugin always writes the list form), the accepted fact with its grounding tier and quote, and two refusals named (`ungrounded` for an invented class, `evidence_not_found` for a quote not in the note). `screenshots/ingest-modal.png`. |
 | Apply | Real `vault.process` wrote exactly the proposed bytes; body preserved; one Notice; modal closed. |
 | Repeat run | The written fact returned as `already_present`; the two refusals persisted; one request. |
 | Stale edit | Editing the note between plan and accept refused with the digest mismatch; nothing written. |
@@ -56,3 +56,17 @@ Plugin source `46c3c66` (engine `v0.2.0`, source `8a3b6cc`, verified by the SHA-
 | Undo | Obsidian's editor undo restored the pre-apply text on disk. |
 
 Not covered: a real remote model, redirects from the endpoint, mobile. The manifest and README release amendment remains deferred to the release commit.
+
+## List versus text relations in Bases (2026-10-13)
+
+Checked on installed Obsidian 1.14.4 Linux, in the same scratch vault, driven over raw CDP against the Electron renderer. This tested Obsidian's Bases, not the plugin: three throwaway notes in a `_scalar-probe/` folder each set `test_property` to a link to `Target` as a lone quoted scalar (`"[[Target]]"`), as a block list and as a flow list. A base embedded in `Target` filtered with `test_property.contains(this.file.asLink())`. The folder was deleted afterwards.
+
+| Form of `test_property` | Returned by the base |
+| --- | --- |
+| `"[[Target]]"` (single value) | no |
+| `- "[[Target]]"` (block list) | yes |
+| `["[[Target]]"]` (flow list) | yes |
+
+[Screenshot](evidence/bases-scalar-vs-list.png): "2 results", BlockList and FlowList. Obsidian stores a lone value as text, so list functions skip it. The engine (0.2.2) still asserts the edge from all three forms and reports the lone scalar as an info-level `scalar_relation` note, as shown by a probe of the built WASM bundle, which also returned no note for either list form and `unquoted_wikilink` for the unquoted `[[A]]`. Assisted ingest is the plugin's only writer: it writes link relations as lists and promotes an existing lone value to a list, while single literals such as dates stay scalars.
+
+The README screenshots were refreshed the same day from plugin 0.3.3 installed in that vault (engine `v0.2.2`, source `150b42053dd9641163ec4d574c9b21e02c06009e`, verified by the SHA-256 in `engine.json`): the panel header reads `whelk-el 0.2.2`, the in-note `ontomark-sparql` block returned five rows for Rex, and the panel listed the `scalar_relation` info note beside an error and a warning. Two temporary notes were added for the last two screenshots and deleted; the vault's own notes were not changed. Release gates for 0.3.3: build with the provenance check on, 32 unit tests, the WASM harness (4), the bundle check (no findings), and the offline test under `docker --network none` (57 checks passed).

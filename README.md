@@ -80,6 +80,8 @@ SELECT ?type WHERE { __THIS__ rdf:type ?type } ORDER BY ?type
 ```
 ````
 
+![An ontomark-sparql block rendered in reading view: a table of the five types Rex has, stated or inferred](docs/screenshots/sparql-in-note.png)
+
 `__THIS__` is the note the block sits in; `[[Dog]]` or `[[Dog|the dog]]` is that note's entity; the first comment may pick the dataset. The query is plain SPARQL otherwise, so it pastes into the SPARQL view or any other engine unchanged. A reference that does not resolve stops the block with a reason, and nothing runs. The in-note surface and its two tokens follow Cristian Vasquez's [Dot Triples](https://github.com/cristianvasquez/dot-triples-plugin), with one difference: references inside string literals and comments are left alone ([ADR-OBS-004](docs/adr/ADR-OBS-004-in-note-sparql-after-dot-triples.md)).
 
 ## Why it works
@@ -136,6 +138,8 @@ Only notes with `type: class`, `type: individual` or `type: property` become ont
 | `domain`, `range`, `subproperty-of` | Property description and hierarchy |
 
 Write relations as a list of quoted links: `subclass-of: ["[[Animal]]"]`, or one `- "[[Animal]]"` per line. Ontomark reads a single quoted link too, but Obsidian stores that as text, so list filters in Bases such as `subclass-of.contains(this.file.asLink())` skip it; the panel notes it as info. An unquoted `[[Animal]]` is read by YAML as a nested list, so quote it.
+
+![The ontology panel's diagnostics: an error, a warning, and the info note for a relation written as a single value](docs/screenshots/ontology-panel-diagnostics.png)
 
 Other keys are kept as annotations. The default **Generic** profile works in any vault; the optional **Estate corpus** profile is for corpora that follow the VisionFlow contract.
 
