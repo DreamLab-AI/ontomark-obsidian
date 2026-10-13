@@ -103,7 +103,7 @@ Under the plugin sits [Ontomark](https://github.com/DreamLab-AI/ontomark), a Rus
 
 ## How it does on a real corpus
 
-My own main vault is a public knowledge graph of **8,446 typed notes** (AI, governance, XR and more), published at [narrativegoldmine.com](https://narrativegoldmine.com) with its [live graph](https://narrativegoldmine.com/graph/), kept to a stricter frontmatter spec, the VisionFlow corpus contract: every page has a stable resource IRI, `is-a` parents, a public gate and provenance. The plugin's optional **Estate corpus** profile reads that spec directly. Running the v0.2.0 engine the plugin ships over the whole vault, on an ordinary laptop (Intel i7-1165G7, 16 GB, Obsidian 1.14.4):
+My own main vault is a public knowledge graph of **8,446 typed notes** (AI, governance, XR and more), published at [narrativegoldmine.com](https://narrativegoldmine.com) with its [live graph](https://narrativegoldmine.com/graph/), kept to a stricter frontmatter spec, the VisionFlow corpus contract: every page has a stable resource IRI, `is-a` parents, a public gate and provenance. The plugin's optional **Estate corpus** profile reads that spec directly. Running the v0.2.0 engine over the whole vault (the figures below predate the plugin's current engine; later releases changed only the frontmatter parser and diagnostics, not the reasoner), on an ordinary laptop (Intel i7-1165G7, 16 GB, Obsidian 1.14.4):
 
 - all 8,446 notes indexed as entities, **278k triples in about 2 s**;
 - full classification in **about 1.5 s**, complete, no unsatisfiable classes, about 58k subclass links in the combined graph;
@@ -117,7 +117,7 @@ Ontomark is in the community directory: **Settings → Community plugins → Bro
 
 To install by hand instead:
 
-1. Download [ontomark-obsidian-0.3.2.zip](https://github.com/DreamLab-AI/ontomark-obsidian/releases/download/0.3.2/ontomark-obsidian-0.3.2.zip) from the [0.3.2 release](https://github.com/DreamLab-AI/ontomark-obsidian/releases/tag/0.3.2).
+1. Download [ontomark-obsidian-0.3.3.zip](https://github.com/DreamLab-AI/ontomark-obsidian/releases/download/0.3.3/ontomark-obsidian-0.3.3.zip) from the [0.3.3 release](https://github.com/DreamLab-AI/ontomark-obsidian/releases/tag/0.3.3).
 2. Extract it into `<vault>/.obsidian/plugins/`; it creates an `ontomark` folder.
 3. **Settings → Community plugins**, enable Ontomark, reload if Obsidian was open.
 
