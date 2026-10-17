@@ -99,6 +99,8 @@ Two things make the approach sound rather than hopeful. **OWL 2 EL** is the frag
 
 Under the plugin sits [Ontomark](https://github.com/DreamLab-AI/ontomark), a Rust workspace (parser, typed model, `whelk-el` reasoner, RDF/SPARQL compiler, ingest) compiled to WebAssembly and embedded in the plugin, running in a background worker. The graph view is the shared [`ontomark-graph`](https://github.com/DreamLab-AI/ontomark/tree/main/packages/graph) package. The plugin itself is TypeScript, built with esbuild against the Obsidian API, and its release gate runs the built plugin in a Docker container with networking disabled and a tripwire on any socket, DNS or fetch.
 
+**What gets indexed.** Every Markdown note in the vault, except notes in the folders listed in the plugin's **Excluded folders** setting (top-level folder names, `templates` by default, so a Templater template's placeholder frontmatter never becomes an entity) and anything covered by Obsidian's own **Excluded files** setting. No folder layout is required: ontology notes can sit anywhere, next to everything else. A note whose frontmatter says `type: class`, `type: individual` or `type: property` becomes an entity; every other note is prose and asserts nothing. Changing the excluded folders reindexes the vault ([ADR-OBS-005](docs/adr/ADR-OBS-005-excluded-folders.md)).
+
 **Limits worth knowing.** Desktop only for now. Reasoning covers the implemented part of OWL 2 EL (no property-range reasoning, no broader individual-level reasoning); unsupported constructs mark the result incomplete. Very large vaults fall back to a relevant-only classification policy and say so. SPARQL refuses UPDATE, SERVICE, FROM and DESCRIBE, and caps rows and time. Ingest proposes facts against the vocabulary you already have; it will not invent classes, and the guards decide what is *safe* to write, not what is *true*, which is why you review. Until you set an endpoint, the plugin makes no network requests at all; its release tests run it in a container with networking disabled. Inline `key :: value` fields are not read, on purpose: only frontmatter asserts, so a diff is the whole review. If you want every field and link in your vault as RDF, [Dot Triples](https://github.com/cristianvasquez/dot-triples-plugin) does that, and Ontomark's [bridge](https://github.com/DreamLab-AI/ontomark/tree/main/bridges/dot-triples) joins the two graphs.
 
 ## How it does on a real corpus
@@ -117,7 +119,7 @@ Ontomark is in the community directory: **Settings → Community plugins → Bro
 
 To install by hand instead:
 
-1. Download [ontomark-obsidian-0.3.4.zip](https://github.com/DreamLab-AI/ontomark-obsidian/releases/download/0.3.4/ontomark-obsidian-0.3.4.zip) from the [0.3.4 release](https://github.com/DreamLab-AI/ontomark-obsidian/releases/tag/0.3.4).
+1. Download [ontomark-obsidian-0.3.5.zip](https://github.com/DreamLab-AI/ontomark-obsidian/releases/download/0.3.5/ontomark-obsidian-0.3.5.zip) from the [0.3.5 release](https://github.com/DreamLab-AI/ontomark-obsidian/releases/tag/0.3.5).
 2. Extract it into `<vault>/.obsidian/plugins/`; it creates an `ontomark` folder.
 3. **Settings → Community plugins**, enable Ontomark, reload if Obsidian was open.
 

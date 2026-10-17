@@ -5,6 +5,8 @@ import { createRequire } from "node:module";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { existsSync } from "node:fs";
+import { DEFAULT_EXCLUDED_FOLDERS, isExcluded, parseIgnoreFilters } from "../src/excludes";
 import type { FileText, HostToWorker, WorkerLike, WorkerToHost } from "../src/protocol";
 import { createWorkerCore } from "../src/worker-core";
 
@@ -48,14 +50,22 @@ export class InProcWorker implements WorkerLike {
 
 export const FIXTURE_VAULT = join(dirname(fileURLToPath(import.meta.url)), "fixtures/vault");
 
+/**
+ * The Markdown files the host would hand the engine: everything under `root`
+ * except what the default excluded folders and the vault's own
+ * `.obsidian/app.json` ignore filters rule out (the same rules `main.ts` applies).
+ */
 export function readVault(root: string = FIXTURE_VAULT): FileText[] {
+  const appJson = join(root, ".obsidian/app.json");
+  const filters = parseIgnoreFilters(existsSync(appJson) ? readFileSync(appJson, "utf8") : null);
   const out: FileText[] = [];
   const walk = (dir: string): void => {
     for (const name of readdirSync(dir).sort()) {
       if (name.startsWith(".")) continue;
       const p = join(dir, name);
+      const rel = relative(root, p).split(sep).join("/");
       if (statSync(p).isDirectory()) walk(p);
-      else out.push({ path: relative(root, p).split(sep).join("/"), text: readFileSync(p, "utf8") });
+      else if (!isExcluded(rel, DEFAULT_EXCLUDED_FOLDERS, filters)) out.push({ path: rel, text: readFileSync(p, "utf8") });
     }
   };
   walk(root);

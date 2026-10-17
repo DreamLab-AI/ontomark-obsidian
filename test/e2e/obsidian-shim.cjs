@@ -163,6 +163,11 @@ class Vault extends Events {
     super();
     this.root = root;
     this.configDir = ".obsidian";
+    // DataAdapter: raw reads below the vault's file index (the plugin reads <configDir>/app.json through it).
+    this.adapter = {
+      read: async (p) => fs.readFileSync(this._abs(p), "utf8"),
+      exists: async (p) => fs.existsSync(this._abs(p)),
+    };
     this.files = new Map();
     const walk = (dir) => {
       for (const name of fs.readdirSync(dir).sort()) {
