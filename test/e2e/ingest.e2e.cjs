@@ -87,10 +87,14 @@ async function main() {
   // ---- configure through the settings tab, as a user would ----
   const tab = app.settingTabs[0];
   tab.display();
-  const inputs = tab.containerEl.findAll((el) => el.tagName === "INPUT");
+  // The ingest controls are the inputs of the three setting items under the "Assisted ingest" heading
+  // (the Excluded folders text control, ADR-OBS-005, sits above it).
+  const items = tab.containerEl.findAll((el) => el.hasClass("setting-item"));
+  const headingAt = items.findIndex((el) => el.hasClass("setting-item-heading") && el.textContent.includes("Assisted ingest"));
+  const inputs = items.slice(headingAt + 1).flatMap((item) => item.findAll((el) => el.tagName === "INPUT"));
   const keyInput = inputs.find((el) => el.type === "password");
   const textInputs = inputs.filter((el) => el.type !== "password");
-  check("settings: endpoint, model and a password-type key field", textInputs.length === 2 && !!keyInput, inputs.map((i) => i.type));
+  check("settings: endpoint, model and a password-type key field", headingAt >= 0 && textInputs.length === 2 && !!keyInput, inputs.map((i) => i.type));
   check("settings: assisted-ingest group is labelled as using the network", tab.containerEl.textContent.includes("Assisted ingest (optional, uses the network)"));
   textInputs[0].value = ENDPOINT;
   await textInputs[0].dispatch("change");

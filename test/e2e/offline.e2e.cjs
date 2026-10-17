@@ -114,7 +114,7 @@ async function main() {
   check("loading and indexing wrote nothing to the vault", hashTree(vaultDir) === before);
 
   // ---- index (EXP-05: generic profile default; plain notes are not entities) ----
-  const api = plugin.api;
+  let api = plugin.api; // reassigned after a reindex (the excluded-folders checks)
   const index = await api.index();
   const entityPaths = index.entities.map((e) => e.path);
   const chain = entityPaths.filter((p) => p.startsWith("Chain/")).length;
@@ -254,8 +254,63 @@ async function main() {
   const renamed = await api.index();
   check("rename: entity follows the file", renamed.entities.some((e) => e.path === "Ontology/Mammals/Mammal.md"));
 
-  // ---- estate profile is opt-in (EXP-05) ----
+  // ---- excluded folders and Obsidian's Excluded files (ADR-OBS-005) ----
+  // The fixture vault holds templates/Note Template.md (Templater placeholders in its
+  // frontmatter) and Notes/Private/Secret.md (type: class) under a `userIgnoreFilters`
+  // entry in .obsidian/app.json. Neither may reach the engine: the entity count checked
+  // above (10 fixture entities) already excludes them; this pins the paths.
+  const hidden = ["templates/Note Template.md", "Notes/Private/Secret.md"];
   const tab = app.settingTabs[0];
+  check("excluded: default `templates` folder and Obsidian's Excluded files are not indexed", plugin.settings.excludedFolders.join() === "templates" && hidden.every((p) => !api.client.paths.includes(p)) && renamed.entities.every((e) => !hidden.includes(e.path)) && renamed.diagnostics.every((d) => !hidden.includes(d.path)), { paths: api.client.paths.filter((p) => !p.startsWith("Chain/")), settings: plugin.settings.excludedFolders });
+  check("excluded: entityForPath is undefined for the template and the private note", (await api.entityForPath(hidden[0])) === undefined && (await api.entityForPath(hidden[1])) === undefined);
+  check("excluded: a note merely named like the folder is indexed", api.client.paths.includes("templates.md") && !api.client.paths.some((p) => p.startsWith("templates/")));
+  // create inside an excluded folder and modify a hidden note: neither event reaches the engine
+  const genQuiet = api.status().generation;
+  await app.vault.create("templates/Another Template.md", "---\ntype: class\n---\nStill a template.\n");
+  await app.vault.modify(app.vault.getAbstractFileByPath("Notes/Private/Secret.md"), "---\ntype: class\n---\nEdited in private.\n");
+  await tick(60);
+  check("excluded: create in templates/ and modify under Excluded files leave the engine untouched", api.status().generation === genQuiet && !api.client.paths.includes("templates/Another Template.md") && !api.client.paths.includes("Notes/Private/Secret.md"), { generation: api.status().generation, before: genQuiet });
+  // Obsidian's Excluded files change while the plugin runs: the next settings save picks it up and reindexes
+  const appJsonPath = path.join(vaultDir, ".obsidian/app.json");
+  const appJsonBefore = fs.readFileSync(appJsonPath, "utf8");
+  fs.writeFileSync(appJsonPath, JSON.stringify({ userIgnoreFilters: ["Notes/Private/", "People/"] }));
+  await tab.setControlValue("autoClassify", true); // any save re-reads app.json
+  api = plugin.api;
+  const noPeople = await api.index();
+  check("excluded: a changed app.json is honoured at the next settings save (People/ gone)", !api.client.paths.some((p) => p.startsWith("People/")) && noPeople.entities.every((e) => !e.path.startsWith("People/")) && api.client.paths.includes("Ontology/Animal.md"), api.client.paths.filter((p) => !p.startsWith("Chain/")));
+  fs.writeFileSync(appJsonPath, "{ not json");
+  await tab.setControlValue("autoClassify", true);
+  api = plugin.api;
+  check("excluded: unreadable app.json fails open (People/ back, Notes/Private/ now indexed)", api.client.paths.includes("People/Alice.md") && api.client.paths.includes("Notes/Private/Secret.md"), api.client.paths.filter((p) => !p.startsWith("Chain/")));
+  fs.writeFileSync(appJsonPath, appJsonBefore);
+  await tab.setControlValue("autoClassify", true);
+  api = plugin.api;
+  check("excluded: restoring app.json restores the filters", api.client.paths.includes("People/Alice.md") && !api.client.paths.includes("Notes/Private/Secret.md"));
+  const genIn = api.status().generation;
+  const chien = app.vault.getAbstractFileByPath("Ontology/Chien.md");
+  await app.vault.rename(chien, "templates/Chien.md");
+  await waitFor(() => api.status().generation > genIn);
+  const movedIn = await api.index();
+  check("excluded: moving a page into templates/ removes it from the engine", !movedIn.entities.some((e) => e.path.endsWith("Chien.md")) && api.client.textOf("templates/Chien.md") === undefined && api.client.textOf("Ontology/Chien.md") === undefined, movedIn.entities.map((e) => e.path).filter((p) => p.includes("Chien")));
+  const genOut = api.status().generation;
+  await app.vault.rename(chien, "Ontology/Chien.md");
+  await waitFor(() => api.status().generation > genOut);
+  const movedOut = await api.index();
+  check("excluded: moving it back out indexes it again", movedOut.entities.some((e) => e.path === "Ontology/Chien.md") && api.client.textOf("Ontology/Chien.md") !== undefined);
+  const excludedDef = tab.getSettingDefinitions().find((d) => d.control?.key === "excludedFolders");
+  const excludedVerdicts = { path: await excludedDef.control.validate("Ontology/sub"), backslash: await excludedDef.control.validate("a\\b"), parent: await excludedDef.control.validate(".."), ok: await excludedDef.control.validate(" templates, My Assets "), empty: await excludedDef.control.validate("") };
+  check("settings: excluded folders is a text control whose validate rejects paths and `..`", excludedDef.control.type === "text" && typeof excludedVerdicts.path === "string" && typeof excludedVerdicts.backslash === "string" && typeof excludedVerdicts.parent === "string" && excludedVerdicts.ok === undefined && excludedVerdicts.empty === undefined, excludedVerdicts);
+  await tab.setControlValue("excludedFolders", " templates, Ontology ,templates ");
+  api = plugin.api; // the setting change reindexed: a new engine
+  const withoutOntology = await api.index();
+  const persistedFolders = JSON.parse(fs.readFileSync(path.join(pluginDir, "data.json"), "utf8")).excludedFolders;
+  check("settings: excluding Ontology reindexes; its pages are gone, others remain", withoutOntology.entities.every((e) => !e.path.startsWith("Ontology/")) && withoutOntology.entities.some((e) => e.path === "People/Alice.md") && !api.client.paths.some((p) => p.startsWith("Ontology/")) && JSON.stringify(persistedFolders) === JSON.stringify(["templates", "Ontology"]) && tab.getControlValue("excludedFolders") === "templates, Ontology", { entities: withoutOntology.entities.map((e) => e.path).filter((p) => !p.startsWith("Chain/")), persistedFolders });
+  await tab.setControlValue("excludedFolders", "templates");
+  api = plugin.api;
+  const restored = await api.index();
+  check("settings: restoring the default brings the Ontology pages back", restored.entities.some((e) => e.path === "Ontology/Animal.md") && restored.entities.length === withoutOntology.entities.length + 7 /* Animal, Cat, Catdog, Chien, Dog, Mammal, has owner */ && plugin.settings.excludedFolders.join() === "templates", { before: withoutOntology.entities.length, after: restored.entities.length });
+
+  // ---- estate profile is opt-in (EXP-05) ----
   tab.display();
   const profileSelect = tab.containerEl.find((el) => el.tagName === "SELECT" && el.children.some((o) => o.value === "estate"));
   check("settings: profile selector offers generic (default) and estate", !!profileSelect && profileSelect.value === "generic", profileSelect?.children.map((o) => o.value));

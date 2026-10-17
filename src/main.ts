@@ -5,8 +5,10 @@ import wasm from "./generated/ontomark.wasm";
 import { OntomarkApi } from "./api";
 import type { ChangeEvent, VaultPort } from "./api";
 import { OntomarkClient, OntomarkError } from "./client";
+import { isExcluded, parseIgnoreFilters } from "./excludes";
+import type { IgnoreFilter } from "./excludes";
 import type { EntityKind, PatchProposal, WorkerLike } from "./protocol";
-import { DEFAULT_SETTINGS, OntomarkSettingTab } from "./settings";
+import { DEFAULT_SETTINGS, OntomarkSettingTab, normaliseSettings } from "./settings";
 import type { OntomarkSettings } from "./settings";
 import { ENTITY_VIEW, EntityView } from "./views/entity-view";
 import { QUERY_VIEW, QueryView } from "./views/query-view";
@@ -62,6 +64,8 @@ export default class OntomarkPlugin extends Plugin {
   private ingestRun: AbortToken | null = null;
 
   private workerUrl = "";
+  /** Obsidian's own "Excluded files" (`userIgnoreFilters` in app.json), honoured alongside `settings.excludedFolders`. */
+  private ignoreFilters: IgnoreFilter[] = [];
   private listeners = new Set<(e: ChangeEvent) => void>();
   private apiUnsubscribe: (() => void) | null = null;
   private autoClassify = debounce(
@@ -74,7 +78,7 @@ export default class OntomarkPlugin extends Plugin {
 
   override async onload(): Promise<void> {
     const saved = (await this.loadData()) as Partial<OntomarkSettings> | null;
-    this.settings = { ...DEFAULT_SETTINGS, ...(saved ?? {}) };
+    this.settings = normaliseSettings(saved);
 
     this.workerUrl = URL.createObjectURL(new Blob([workerSource], { type: "text/javascript" }));
     this.api = this.createApi();
@@ -110,8 +114,36 @@ export default class OntomarkPlugin extends Plugin {
     this.workerUrl = "";
   }
 
-  async saveSettings(): Promise<void> {
+  /**
+   * Persist the settings. A save is also one of the two moments app.json is
+   * re-read (see loadIgnoreFilters); when Obsidian's Excluded files changed
+   * since the last read, the vault is reindexed under the new rules so the
+   * engine never keeps a page that is now excluded. Returns `true` when that
+   * reindex ran, so a caller that would reindex anyway can skip its own.
+   */
+  async saveSettings(): Promise<boolean> {
     await this.saveData(this.settings);
+    if (!(await this.loadIgnoreFilters())) return false;
+    await this.reindex();
+    return true;
+  }
+
+  /**
+   * Throw the engine away and index the vault again from scratch, so it holds
+   * exactly the notes that are not excluded. Used by the "Reindex vault"
+   * command and by a change to the excluded folders. Resolves once the new
+   * index is ready; a failure is reported in a Notice, not thrown.
+   */
+  reindex(): Promise<void> {
+    this.api.dispose();
+    this.api = this.createApi();
+    this.ready = this.startApi(this.api);
+    return this.ready.catch(() => undefined);
+  }
+
+  /** Is this vault path kept out of the engine by the excluded-folders setting or Obsidian's Excluded files? */
+  excluded(path: string): boolean {
+    return isExcluded(path, this.settings.excludedFolders, this.ignoreFilters);
   }
 
   /** Subscribe to change and progress events of the current api (survives re-indexing). */
@@ -167,7 +199,7 @@ export default class OntomarkPlugin extends Plugin {
     const vault = this.app.vault;
     return {
       listMarkdown: async () => {
-        const files = vault.getMarkdownFiles();
+        const files = vault.getMarkdownFiles().filter((f) => !this.excluded(f.path));
         return Promise.all(files.map(async (f) => ({ path: f.path, text: await vault.read(f) })));
       },
       read: async (path) => {
@@ -211,6 +243,7 @@ export default class OntomarkPlugin extends Plugin {
     ready.catch(() => undefined);
     const run = async (): Promise<void> => {
       try {
+        await this.loadIgnoreFilters();
         await api.start(this.settings.profile);
         resolve();
       } catch (err) {
@@ -220,6 +253,32 @@ export default class OntomarkPlugin extends Plugin {
     };
     this.app.workspace.onLayoutReady(() => void run());
     return ready;
+  }
+
+  /**
+   * Read Obsidian's "Excluded files" setting from `<configDir>/app.json`.
+   * Fail-open: a missing file, bad JSON or no `userIgnoreFilters` key means
+   * no extra filters; a read that fails for another reason keeps the filters
+   * already loaded rather than silently un-excluding everything. There is no
+   * public event for a change to app.json (`vault.on("raw", …)` is not part
+   * of the API), so it is read when the layout is ready (before the initial
+   * index) and again whenever the settings tab saves; a change made in
+   * Obsidian's own settings takes effect at the next settings save, reindex
+   * or plugin reload. Returns `true` when the filters differ from before.
+   */
+  private async loadIgnoreFilters(): Promise<boolean> {
+    const { adapter, configDir } = this.app.vault;
+    const file = `${configDir}/app.json`;
+    let next: IgnoreFilter[];
+    try {
+      next = (await adapter.exists(file)) ? parseIgnoreFilters(await adapter.read(file)) : [];
+    } catch {
+      return false;
+    }
+    const describe = (f: IgnoreFilter): string => (f.kind === "regex" ? `r:${f.regex.source}` : `p:${f.prefix}`);
+    const changed = JSON.stringify(next.map(describe)) !== JSON.stringify(this.ignoreFilters.map(describe));
+    this.ignoreFilters = next;
+    return changed;
   }
 
   private emit(e: ChangeEvent): void {
@@ -245,11 +304,22 @@ export default class OntomarkPlugin extends Plugin {
     const isMd = (f: TAbstractFile): f is TFile => f instanceof TFile && f.extension === "md";
     // Every handler waits for the initial index, so an edit made while it loads
     // is applied after it (fileChanged ignores text the engine already has).
+    // Excluded paths (ADR-OBS-005) never reach the engine. The rules are
+    // checked after `ready`, once the ignore filters are loaded, and the api
+    // is the one current at event time, so a call outlasting a reindex lands
+    // on the disposed client (quiet) rather than on the unstarted new one.
+    // Delete and rename-out ask the engine, not the rules: `fileDeleted` is a
+    // no-op for a path it never indexed, and `fileRenamed` indexes the target
+    // when the source was not indexed, so a page the rules excluded only
+    // after it was indexed is still removed or moved rather than orphaned.
+    const current = (): { ready: Promise<void>; api: OntomarkApi } => ({ ready: this.ready, api: this.api });
     const changed = (f: TAbstractFile): void => {
       if (!isMd(f)) return;
+      const { ready, api } = current();
       void this.guard(async () => {
-        await this.ready;
-        await this.api.fileChanged(f.path, await vault.read(f));
+        await ready;
+        if (this.excluded(f.path)) return;
+        await api.fileChanged(f.path, await vault.read(f));
       });
     };
     this.registerEvent(vault.on("modify", changed));
@@ -257,18 +327,23 @@ export default class OntomarkPlugin extends Plugin {
     this.registerEvent(
       vault.on("delete", (f) => {
         if (!isMd(f)) return;
+        const { ready, api } = current();
         void this.guard(async () => {
-          await this.ready;
-          await this.api.fileDeleted(f.path);
+          await ready;
+          await api.fileDeleted(f.path);
         });
       }),
     );
     this.registerEvent(
       vault.on("rename", (f, oldPath) => {
         if (!isMd(f)) return;
+        const { ready, api } = current();
         void this.guard(async () => {
-          await this.ready;
-          await this.api.fileRenamed(oldPath, f.path);
+          await ready;
+          // Into an excluded folder: the page leaves the engine (no-op if it was never there).
+          if (this.excluded(f.path)) await api.fileDeleted(oldPath);
+          // Otherwise follow the file; out of an excluded folder this indexes it afresh.
+          else await api.fileRenamed(oldPath, f.path);
         });
       }),
     );
@@ -364,15 +439,7 @@ export default class OntomarkPlugin extends Plugin {
     this.addCommand({ id: "open-panel", name: "Open ontology panel", callback: () => void this.openEntityView() });
     this.addCommand({ id: "open-query", name: "Open SPARQL query", callback: () => void this.openQueryView() });
     this.addCommand({ id: "classify-now", name: "Classify now", callback: () => void this.runClassify() });
-    this.addCommand({
-      id: "reindex",
-      name: "Reindex vault",
-      callback: () => {
-        this.api.dispose();
-        this.api = this.createApi();
-        this.ready = this.startApi(this.api);
-      },
-    });
+    this.addCommand({ id: "reindex", name: "Reindex vault", callback: () => void this.reindex() });
     this.addCommand({ id: "make-class", name: "Make this note a class", callback: () => void this.setActiveKind("class") });
     this.addCommand({
       id: "make-individual",

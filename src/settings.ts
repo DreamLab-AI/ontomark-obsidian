@@ -1,5 +1,6 @@
 import { PluginSettingTab, Setting } from "obsidian";
 import type { App, SettingDefinitionItem, SettingGroup, SettingGroupItem } from "obsidian";
+import { DEFAULT_EXCLUDED_FOLDERS, folderListProblem, parseFolderList } from "./excludes";
 import { endpointProblem } from "./ingest-transport";
 import type { ProfileId } from "./protocol";
 import type OntomarkPlugin from "./main";
@@ -9,6 +10,8 @@ export interface OntomarkSettings {
   profile: ProfileId;
   autoClassify: boolean;
   queryLimit: number;
+  /** Top-level vault folders the engine never indexes (ADR-OBS-005). */
+  excludedFolders: string[];
   /** Chat-completions URL for assisted ingest. Empty = the feature is off. */
   ingestEndpoint: string;
   /** Passed as the `model` field of the request; empty omits it. */
@@ -19,9 +22,18 @@ export const DEFAULT_SETTINGS: OntomarkSettings = {
   profile: "generic",
   autoClassify: true,
   queryLimit: 1000,
+  excludedFolders: [...DEFAULT_EXCLUDED_FOLDERS],
   ingestEndpoint: "",
   ingestModel: "",
 };
+
+/** Merge saved data over the defaults, repairing a value an older version or a hand edit left malformed. */
+export function normaliseSettings(saved: Partial<OntomarkSettings> | null | undefined): OntomarkSettings {
+  const merged = { ...DEFAULT_SETTINGS, ...(saved ?? {}) };
+  const folders = Array.isArray(merged.excludedFolders) ? merged.excludedFolders : DEFAULT_SETTINGS.excludedFolders;
+  merged.excludedFolders = parseFolderList(folders.filter((f): f is string => typeof f === "string").join(","));
+  return merged;
+}
 
 type Key = keyof OntomarkSettings;
 
@@ -75,6 +87,18 @@ export class OntomarkSettingTab extends PluginSettingTab {
         },
       },
       {
+        name: "Excluded folders",
+        desc: "Top-level folders whose notes are never indexed, comma-separated; case does not matter. Templates belong here: a template's placeholder frontmatter would otherwise become an entity or a validation error. Notes under Obsidian's own Excluded files setting are skipped as well. Changing this reindexes the vault.",
+        aliases: ["templates", "ignore", "skip", "index"],
+        control: {
+          type: "text",
+          key: "excludedFolders",
+          defaultValue: DEFAULT_SETTINGS.excludedFolders.join(", "),
+          placeholder: "templates, assets",
+          validate: (v: string): string | undefined => folderListProblem(v),
+        },
+      },
+      {
         type: "group",
         heading: "Assisted ingest (optional, uses the network)",
         items: [
@@ -112,13 +136,29 @@ export class OntomarkSettingTab extends PluginSettingTab {
   override getControlValue(key: string): unknown {
     if (!isKey(key)) return undefined;
     const value = this.plugin.settings[key];
-    return key === "queryLimit" ? String(value) : value;
+    if (key === "queryLimit") return String(value);
+    if (key === "excludedFolders") return this.plugin.settings.excludedFolders.join(", ");
+    return value;
   }
 
-  /** Persist one setting; a profile change is pushed to the engine as well. */
+  /**
+   * Persist one setting. A profile change is pushed to the engine; a change
+   * to the excluded folders reindexes, so the engine ends up holding exactly
+   * the notes that are not excluded (a newly excluded page is removed).
+   */
   override async setControlValue(key: string, value: unknown): Promise<void> {
     if (!isKey(key)) return;
     const settings = this.plugin.settings as unknown as Record<Key, unknown>;
+    if (key === "excludedFolders") {
+      const text = Array.isArray(value) ? value.join(",") : String(value ?? "");
+      if (folderListProblem(text)) return; // the control shows the message; nothing is stored
+      const next = parseFolderList(text);
+      const unchanged = JSON.stringify(next) === JSON.stringify(this.plugin.settings.excludedFolders);
+      settings[key] = next;
+      const reindexed = await this.plugin.saveSettings();
+      if (!unchanged && !reindexed) await this.plugin.reindex();
+      return;
+    }
     // Dropdown controls hand back strings; the row limit is stored as a number.
     settings[key] = key === "queryLimit" ? Number(value) : typeof value === "string" ? value.trim() : value;
     await this.plugin.saveSettings();
@@ -188,7 +228,12 @@ export class OntomarkSettingTab extends PluginSettingTab {
       case "text":
         setting.addText((t) => {
           if (control.placeholder) t.setPlaceholder(control.placeholder);
-          t.setValue(String(current ?? control.defaultValue ?? "")).onChange(async (v) => {
+          t.setValue(String(current ?? control.defaultValue ?? ""));
+          // The DOM `change` event, not every keystroke: it fires when the value
+          // is committed (blur or Enter), which matters for a control whose
+          // change reindexes the vault.
+          t.inputEl.addEventListener("change", async () => {
+            const v = t.inputEl.value;
             const problem = (await control.validate?.(v)) || null;
             t.inputEl.toggleClass("ontomark-invalid", problem !== null);
             t.inputEl.title = problem ?? "";
