@@ -6,3 +6,6 @@ src/generated/web/*
 !src/generated/web/ontomark_wasm.d.ts
 .offline/
 release/
+
+# agent worktrees
+.claude/
