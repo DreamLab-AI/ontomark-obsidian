@@ -1,5 +1,7 @@
 # Ontomark for Obsidian
 
+[Install](#install) · [Try three notes](#three-notes-is-enough-to-start) · [Features](#what-you-get) · [Status](#working-status) · [Engine](https://github.com/DreamLab-AI/ontomark)
+
 **Make your vault mean something to a machine, without changing how you write.** Add a `type` and a parent link to a note's frontmatter and Ontomark turns your vault into an ontology: it draws the hierarchy, works out what follows from it, answers precise questions about it, and shows every proposed change as a diff before anything is written. Notes stay plain Markdown. Nothing leaves your computer unless you choose to connect a model.
 
 https://github.com/user-attachments/assets/5a129220-975a-4ac9-b501-d2b0365022cb
@@ -14,23 +16,26 @@ That matters most when a vault grows past what you can hold in your head, and wh
 
 ## Three notes is enough to start
 
+`Animal.md`:
+
 ```markdown
-# Animal.md
 ---
 type: class
 ---
 ```
 
+`Dog.md`:
+
 ```markdown
-# Dog.md
 ---
 type: class
 subclass-of: ["[[Animal]]"]
 ---
 ```
 
+`Rex.md`:
+
 ```markdown
-# Rex.md
 ---
 type: individual
 instance-of: ["[[Dog]]"]
@@ -45,11 +50,11 @@ Open **Ontology graph**. Solid edges are what you wrote; the dashed `Rex → Ani
 | --- | --- |
 | **Ontology graph** | Explore typed notes and their hierarchy. Search, zoom, focus a neighbourhood, open the note. Inferred edges are dashed. |
 | **Ontology panel** | Browse classes, individuals and properties; see stated and inferred parents, and anything the reasoner could not handle. |
-| **Local reasoning** | An OWL 2 EL reasoner runs inside Obsidian and keeps up as you edit. Nothing is approximated: if a construct is unsupported, it says so. |
+| **Local reasoning** | An OWL 2 EL reasoner runs inside Obsidian and keeps up as you edit. Unsupported constructs are reported and can make classification incomplete. |
 | **SPARQL** | Ask structured questions (SELECT, ASK, CONSTRUCT) over what you stated, what was inferred, or both. A working example is loaded for you. |
 | **SPARQL in a note** | Put a query in an `ontomark-sparql` code block and it renders its result there, live. `__THIS__` is the note it sits in and `[[Note]]` is any entity note; `# dataset: combined` includes what was inferred. After [Dot Triples](https://github.com/cristianvasquez/dot-triples-plugin). |
 | **Reviewed edits** | Commands to make a note a class, individual or property, or add a parent. Every change is a diff you apply, and is refused if the file changed underneath it. |
-| **Assisted ingest** | Point the plugin at a model endpoint of your choosing, enter a key for the session, and run *Extract facts from this note*. The model suggests; the engine checks every suggestion against your vault and the note's own text; you see a diff with each quote beside its fact, and the refusals with their reasons, and decide. Off by default: nothing is sent until you set an endpoint, and then only to that one URL, only when you run the command. |
+| **Assisted ingest** | Point the plugin at a model endpoint of your choosing, enter a key for the session, and run *Extract facts from this note*. The model suggests; the engine checks every suggestion against your vault and the note's own text; you see a diff with each quote beside its fact, and the refusals with their reasons, and decide. Off by default: nothing is sent until you set an endpoint, and requests are made only when you run the command. The transport’s redirect limitation is described below. |
 
 ![How the plugin works, as a bench of nine stations: notes in, a typed-frontmatter gate, indexer, reasoner, graph, panel, SPARQL, reviewed diff, and the optional ingest bolt-on, drawn plugged in](docs/figures/ontomark-anatomy.svg)
 
@@ -61,12 +66,12 @@ Open **Ontology graph**. Solid edges are what you wrote; the dashed `Rex → Ani
 
 Language models are good at reading a note and bad at being trusted with your ontology: they invent identifiers, merge things that share a name, and quote text that is not there. Ontomark's ingest lets the model do only the reading.
 
-- The model receives the note's text, its label and the keys it may fill. Never other notes, never your vault path, never your API key.
+- The model receives the note's text, its label and the keys it may fill. Other notes and the vault path are excluded from the model payload. A configured session key is sent to the endpoint as an HTTP authorisation header, not as prompt text.
 - The engine grounds every proposed **name** against the labels and aliases already in your vault; the model's own identifiers are ignored. A name that fits two notes is withheld as ambiguous, not guessed.
 - Every value needs a verbatim quote from the note, and the quote has to mention the value. Literals are checked against their types (`3,5` is not a decimal; `2023-02-29` is not a date).
 - Everything accepted becomes **one** patch, shown as the usual diff with the evidence highlighted. Everything refused is listed with the reason. Apply is the normal reviewed-edit path; undo is Obsidian's undo.
 
-One endpoint, the one you type in, is the only place the plugin can send anything, and only when you run the command. Type the final URL: Obsidian's request layer follows redirects on its own, so the plugin refuses a 3xx answer rather than letting a hop choose the destination for you. [ADR-OBS-003](docs/adr/ADR-OBS-003-ingest-action-and-offline-contract.md) is the full decision.
+Ingest uses the configured absolute HTTP(S) URL and sends a configured key in an authorisation header. Use an endpoint you trust to handle the note text and credentials. Obsidian's `requestUrl` can follow redirects without exposing the final URL, so the plugin cannot guarantee that the configured host is the only destination. It rejects a 3xx status if one is returned to it; that does not prevent a redirect already followed by the host layer. Redirect behaviour has not received installed-desktop acceptance. See [`ingest-transport.ts`](src/ingest-transport.ts) and [ADR-OBS-003](docs/adr/ADR-OBS-003-ingest-action-and-offline-contract.md).
 
 ### SPARQL in a note
 
@@ -84,34 +89,54 @@ SELECT ?type WHERE { __THIS__ rdf:type ?type } ORDER BY ?type
 
 `__THIS__` is the note the block sits in; `[[Dog]]` or `[[Dog|the dog]]` is that note's entity; the first comment may pick the dataset. The query is plain SPARQL otherwise, so it pastes into the SPARQL view or any other engine unchanged. A reference that does not resolve stops the block with a reason, and nothing runs. The in-note surface and its two tokens follow Cristian Vasquez's [Dot Triples](https://github.com/cristianvasquez/dot-triples-plugin), with one difference: references inside string literals and comments are left alone ([ADR-OBS-004](docs/adr/ADR-OBS-004-in-note-sparql-after-dot-triples.md)).
 
-## Why it works
+## How the pieces fit
 
-A few numbers from the research this rests on:
+```mermaid
+flowchart LR
+    NOTES["Vault Markdown and frontmatter"] --> INDEX["Indexer and exclusions"]
+    INDEX --> ENGINE["Pinned Ontomark WASM worker"]
+    ENGINE --> REASON["Classification and named limits"]
+    ENGINE --> QUERY["Bounded local SPARQL"]
+    REASON --> VIEWS["Graph and ontology panel"]
+    QUERY --> VIEWS
+    NOTES --> PLAN["Optional ingest plan"]
+    PLAN -.->|"User-invoked request"| MODEL["Configured model endpoint"]
+    MODEL -.-> CANDIDATES["Proposed names, values and quotes"]
+    CANDIDATES --> GUARDS["Vocabulary and evidence checks"]
+    GUARDS --> DIFF["Diff for human review"]
+    DIFF -->|"Apply if source digest still matches"| NOTES
+```
 
-- Asking a model questions over a **knowledge graph** instead of the raw database schema took GPT-4's accuracy on enterprise questions from **16% to 54%** (Sequeda, Allemang & Jacob, 2023, [arXiv:2311.07509](https://arxiv.org/abs/2311.07509)).
-- Letting the model propose **names** and grounding them against a real vocabulary afterwards returned the correct ontology identifier for **98 of 100** terms; asking the model for identifiers directly got **3 of 100** (SPIRES, Caufield et al., *Bioinformatics* 2024, [arXiv:2304.02711](https://arxiv.org/abs/2304.02711)). That is the pattern Ontomark's ingest follows.
-- Left to their own devices, models fabricate: **55%** of GPT-3.5's and **18%** of GPT-4's literature citations in one study did not exist (Walters & Wilder, *Scientific Reports* 2023, [doi:10.1038/s41598-023-41032-5](https://doi.org/10.1038/s41598-023-41032-5)). Hence a diff you review, not an edit you discover.
-- The reasoning is cheap by design. **OWL 2 EL** keeps classification polynomial even with general axioms (Baader, Brandt & Lutz, IJCAI 2005), which is how an EL reasoner classifies SNOMED CT's ~300,000 concepts in **under ten seconds** (Kazakov, Krötzsch & Simančík, *J. Automated Reasoning* 2014). A vault is a great deal smaller.
-
-Two things make the approach sound rather than hopeful. **OWL 2 EL** is the fragment of the Web Ontology Language built for large class hierarchies: classification is polynomial, which is why terminologies with hundreds of thousands of classes use it and why it can run inside an editor. And **grounding is a separate, deterministic step**: following the SPIRES pattern (Caufield et al., OntoGPT), the model proposes names and the engine resolves them against your real vocabulary, so a model error becomes a withheld suggestion rather than a wrong fact.
+Models propose names and values; the engine resolves them against the vault and checks the quoted evidence. Formal inference derives consequences under the supported profile. Neither process establishes the truth of the original notes, so a reviewable patch remains part of the workflow.
 
 ## Under the hood
 
-Under the plugin sits [Ontomark](https://github.com/DreamLab-AI/ontomark), a Rust workspace (parser, typed model, `whelk-el` reasoner, RDF/SPARQL compiler, ingest) compiled to WebAssembly and embedded in the plugin, running in a background worker. The graph view is the shared [`ontomark-graph`](https://github.com/DreamLab-AI/ontomark/tree/main/packages/graph) package. The plugin itself is TypeScript, built with esbuild against the Obsidian API, and its release gate runs the built plugin in a Docker container with networking disabled and a tripwire on any socket, DNS or fetch.
+Under the plugin sits [Ontomark](https://github.com/DreamLab-AI/ontomark), a Rust workspace (parser, typed model, `whelk-el` reasoner, RDF/SPARQL compiler, ingest) compiled to WebAssembly and embedded in the plugin, running in a background worker. The graph view is the shared [`ontomark-graph`](https://github.com/DreamLab-AI/ontomark/tree/main/packages/graph) package. The plugin is TypeScript, built with esbuild against the Obsidian API. Its offline test runs the built plugin against an API shim in a Docker container with networking disabled and checks for unexpected network attempts. That test is separate from installed-Obsidian acceptance.
 
 **What gets indexed.** Every Markdown note in the vault, except notes in the folders listed in the plugin's **Excluded folders** setting (top-level folder names, `templates` by default, so a Templater template's placeholder frontmatter never becomes an entity) and anything covered by Obsidian's own **Excluded files** setting. No folder layout is required: ontology notes can sit anywhere, next to everything else. A note whose frontmatter says `type: class`, `type: individual` or `type: property` becomes an entity; every other note is prose and asserts nothing. Changing the excluded folders reindexes the vault ([ADR-OBS-005](docs/adr/ADR-OBS-005-excluded-folders.md)).
 
 **Limits worth knowing.** Desktop only for now. Reasoning covers the implemented part of OWL 2 EL (no property-range reasoning, no broader individual-level reasoning); unsupported constructs mark the result incomplete. Very large vaults fall back to a relevant-only classification policy and say so. SPARQL refuses UPDATE, SERVICE, FROM and DESCRIBE, and caps rows and time. Ingest proposes facts against the vocabulary you already have; it will not invent classes, and the guards decide what is *safe* to write, not what is *true*, which is why you review. Until you set an endpoint, the plugin makes no network requests at all; its release tests run it in a container with networking disabled. Inline `key :: value` fields are not read, on purpose: only frontmatter asserts, so a diff is the whole review. If you want every field and link in your vault as RDF, [Dot Triples](https://github.com/cristianvasquez/dot-triples-plugin) does that, and Ontomark's [bridge](https://github.com/DreamLab-AI/ontomark/tree/main/bridges/dot-triples) joins the two graphs.
 
-## How it does on a real corpus
+## Working status
 
-My own main vault is a public knowledge graph of **8,446 typed notes** (AI, governance, XR and more), published at [narrativegoldmine.com](https://narrativegoldmine.com) with its [live graph](https://narrativegoldmine.com/graph/), kept to a stricter frontmatter spec, the VisionFlow corpus contract: every page has a stable resource IRI, `is-a` parents, a public gate and provenance. The plugin's optional **Estate corpus** profile reads that spec directly. Running the v0.2.0 engine over the whole vault (the figures below predate the plugin's current engine; later releases changed only the frontmatter parser and diagnostics, not the reasoner), on an ordinary laptop (Intel i7-1165G7, 16 GB, Obsidian 1.14.4):
+**Reviewed 21 October 2026.** The plugin manifest is **0.3.6**, desktop only, with minimum Obsidian **1.7.2**. [`engine.json`](engine.json) pins Ontomark **v0.4.0**, source `cb563e8d`, by SHA-256. Ontomark's current CLI release is a separate product: installing this plugin does not install or upgrade the CLI, and it does not imply the plugin includes later compiler features.
+
+The [desktop acceptance record](docs/desktop-acceptance.md) identifies the tested Linux Obsidian version, synthetic vaults, plugin/engine revisions and observed behaviours. It covers indexing, query, graph navigation and reviewed edits, with additional ingest checks against a local stub. It does not establish mobile support, performance of this exact release on every vault, or successful integration with a real remote model.
+
+<details>
+<summary><strong>Earlier corpus timings and data-quality findings</strong></summary>
+
+### Historical corpus measurement
+
+An earlier measurement used a corpus of **8,446 typed notes** (AI, governance, XR and more), published at [narrativegoldmine.com](https://narrativegoldmine.com) with its [live graph](https://narrativegoldmine.com/graph/), kept to a stricter frontmatter spec, the VisionFlow corpus contract: every page has a stable resource IRI, `is-a` parents, a public gate and provenance. The plugin's optional **Estate corpus** profile reads that spec directly. Running the v0.2.0 engine over the whole vault (the figures below predate the pinned engine and are not current-release performance results), on an ordinary laptop (Intel i7-1165G7, 16 GB, Obsidian 1.14.4):
 
 - all 8,446 notes indexed as entities, **278k triples in about 2 s**;
 - full classification in **about 1.5 s**, complete, no unsatisfiable classes, about 58k subclass links in the combined graph;
 - and real problems surfaced in the data: **935 ambiguous parent links** (a `[[Decentralized Autonomous Organization]]` that matches both *DAO* and the full-name note), **936 parents pointing at pages that do not exist**, and **42 accidental `is-a` cycles** that quietly make two classes one (*automation ≡ smart-home* was the author's favourite). Cleanup is in progress.
 
-Ontomark's engine README reports the same corpus through its command-line build, which applies a different public gate and so counts 9,244 classes; the two figures measure different things, not a disagreement.
+These are historical workload observations. Corpus growth, filtering, engine changes and hardware affect both counts and timings; use the pinned generation and acceptance records when comparing results.
+
+</details>
 
 ## Install
 
@@ -123,7 +148,7 @@ To install by hand instead:
 2. Extract it into `<vault>/.obsidian/plugins/`; it creates an `ontomark` folder.
 3. **Settings → Community plugins**, enable Ontomark, reload if Obsidian was open.
 
-Each release ships with the engine inside it: no Node, Rust, account, database or internet connection is needed.
+The installed release includes its engine: ordinary indexing, reasoning and queries need no Node, Rust, account, database or internet connection. Downloading a release and optional model ingest use the network.
 
 ## Frontmatter reference
 
@@ -145,12 +170,12 @@ Write relations as a list of quoted links: `subclass-of: ["[[Animal]]"]`, or one
 
 Other keys are kept as annotations. The default **Generic** profile works in any vault; the optional **Estate corpus** profile is for corpora that follow the VisionFlow contract.
 
-## Further afield
+## Ecosystem and documentation
 
 This repository is only the Obsidian interface. If you want to go deeper:
 
-- **[Ontomark](https://github.com/DreamLab-AI/ontomark)**: the engine, CLI, shared graph, and the measured case for structured knowledge made on a 9,000-note corpus.
-- **[VisionFlow](https://github.com/DreamLab-AI/VisionFlow)**: the wider project on making human-written knowledge useful to agents.
+- **[Ontomark](https://github.com/DreamLab-AI/ontomark)**: the engine, CLI, shared graph and publication compiler. This plugin pins its engine independently.
+- **[VisionFlow](https://github.com/DreamLab-AI/VisionFlow)**: the ecosystem architecture, compatibility records and diagrams. The plugin is the local authoring surface; it is not the agent runtime, grounding server or public corpus publisher.
 - **[Dot Triples](https://github.com/cristianvasquez/dot-triples-plugin)** by Cristian Vasquez: every note, field and link in a vault as RDF, queried with SPARQL. The in-note query block here follows it, and the engine's [bridge](https://github.com/DreamLab-AI/ontomark/tree/main/bridges/dot-triples) lifts its output into Ontomark's vocabulary.
 - Local decisions: [ADR-OBS-001](docs/adr/ADR-OBS-001-shared-graph.md), [ADR-OBS-002](docs/adr/ADR-OBS-002-assisted-ingest-boundary-and-estate-notes.md), [ADR-OBS-003](docs/adr/ADR-OBS-003-ingest-action-and-offline-contract.md), [ADR-OBS-004](docs/adr/ADR-OBS-004-in-note-sparql-after-dot-triples.md); [desktop acceptance record](docs/desktop-acceptance.md).
 

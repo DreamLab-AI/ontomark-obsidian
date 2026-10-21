@@ -41,3 +41,10 @@ checked in the settings tab and again before every run), and a 3xx answer is tre
 the user is told to fix by typing the final URL. The bundle check guards `requestUrl` and
 `request` call sites; it is a guard against honest mistakes, not a proof against a
 deliberately obfuscated call, and this record says so.
+
+
+## Source clarification (2026-10-21)
+
+The implementation now exists in `src/main.ts` and `src/ingest-transport.ts` and ships with plugin 0.3.6; the proposal's initial implementation and activation labels above describe its original date. The release pins engine v0.4.0 in `engine.json`. The registered command is “Extract facts from this note”.
+
+The redirect amendment describes an endpoint requirement, not an enforced destination guarantee. `requestUrl` may follow a redirect before returning a response. Rejecting a returned 3xx cannot prevent that earlier hop, and the plugin does not observe the final URL. A configured credential is sent in the HTTP authorisation header, while remaining absent from the model prompt. Installed-desktop redirect behaviour remains unverified in `docs/desktop-acceptance.md`.
