@@ -119,7 +119,7 @@ Under the plugin sits [Ontomark](https://github.com/DreamLab-AI/ontomark), a Rus
 
 ## Working status
 
-**Reviewed 21 October 2026.** The plugin manifest is **0.3.6**, desktop only, with minimum Obsidian **1.7.2**. [`engine.json`](engine.json) pins Ontomark **v0.4.0**, source `cb563e8d`, by SHA-256. Ontomark's current CLI release is a separate product: installing this plugin does not install or upgrade the CLI, and it does not imply the plugin includes later compiler features.
+**Reviewed 21 October 2026.** The plugin manifest is **0.3.7**, desktop only, with minimum Obsidian **1.7.2**. [`engine.json`](engine.json) pins Ontomark **v0.4.0**, source `cb563e8d`, by SHA-256. Ontomark's current CLI release is a separate product: installing this plugin does not install or upgrade the CLI, and it does not imply the plugin includes later compiler features.
 
 The [desktop acceptance record](docs/desktop-acceptance.md) identifies the tested Linux Obsidian version, synthetic vaults, plugin/engine revisions and observed behaviours. It covers indexing, query, graph navigation and reviewed edits, with additional ingest checks against a local stub. It does not establish mobile support, performance of this exact release on every vault, or successful integration with a real remote model.
 
@@ -144,7 +144,7 @@ Ontomark is in the community directory: **Settings → Community plugins → Bro
 
 To install by hand instead:
 
-1. Download [ontomark-obsidian-0.3.6.zip](https://github.com/DreamLab-AI/ontomark-obsidian/releases/download/0.3.6/ontomark-obsidian-0.3.6.zip) from the [0.3.6 release](https://github.com/DreamLab-AI/ontomark-obsidian/releases/tag/0.3.6).
+1. Download [ontomark-obsidian-0.3.7.zip](https://github.com/DreamLab-AI/ontomark-obsidian/releases/download/0.3.7/ontomark-obsidian-0.3.7.zip) from the [0.3.7 release](https://github.com/DreamLab-AI/ontomark-obsidian/releases/tag/0.3.7).
 2. Extract it into `<vault>/.obsidian/plugins/`; it creates an `ontomark` folder.
 3. **Settings → Community plugins**, enable Ontomark, reload if Obsidian was open.
 
