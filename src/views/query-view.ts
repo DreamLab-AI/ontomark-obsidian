@@ -1,9 +1,11 @@
-import { ItemView } from "obsidian";
+import { ItemView, Notice } from "obsidian";
 import type { WorkspaceLeaf } from "obsidian";
 import { OntomarkError } from "../client";
 import type { DatasetSelection, QueryResult } from "../protocol";
 import type OntomarkPlugin from "../main";
 import { renderQueryResult } from "./query-render";
+import { pickTemplate } from "../jev";
+import { compileTemplate, mentionedEntities, templateOffers } from "../query-templates";
 
 export const QUERY_VIEW = "ontomark-query";
 
@@ -64,6 +66,9 @@ export class QueryView extends ItemView {
       void this.run();
     });
 
+    // Jev option (OB-02-S1-01). Not created at all unless the user turned it on.
+    if (this.plugin.jevConfig().enabled) this.renderAsk(el);
+
     el.createDiv({
       cls: "ontomark-help",
       text: "Supported: SELECT, ASK, CONSTRUCT, OPTIONAL, UNION, FILTER, ORDER BY, LIMIT. Refused: UPDATE, SERVICE, FROM.",
@@ -73,6 +78,44 @@ export class QueryView extends ItemView {
 
   override async onClose(): Promise<void> {
     // nothing to release
+  }
+
+  /** The "ask in words" row: Jev picks a template; the query is compiled here and only filled in, never run. */
+  private renderAsk(el: HTMLElement): void {
+    const row = el.createDiv({ cls: "ontomark-actions" });
+    const input = row.createEl("input", {
+      cls: "ontomark-ask-input",
+      attr: { type: "text", placeholder: "Ask in words, e.g. what are the subclasses of Animal", "data-ontomark": "ask" },
+    });
+    const button = row.createEl("button", { text: "Suggest query (Jev)", attr: { "data-ontomark-action": "ask" } });
+    button.addEventListener("click", () => {
+      void this.suggest(input.value.trim());
+    });
+  }
+
+  /** Fill the textarea with a compiled template for `question`; on any fallback leave the panel as it was. */
+  async suggest(question: string): Promise<void> {
+    const cfg = this.plugin.jevConfig();
+    if (!cfg.enabled || !question) return;
+    try {
+      const entities = await this.plugin.api.entities();
+      const offers = mentionedEntities(question, entities).map((e) => ({ iri: e.iri, label: e.label, kind: e.kind }));
+      const picked = await pickTemplate(cfg, this.plugin.jevDeps(), question, templateOffers(), offers);
+      if (!picked.ok) {
+        new Notice(`Ontomark: Jev could not suggest a query (${picked.reason}). Write the SPARQL as before.`);
+        return;
+      }
+      const sparql = compileTemplate(picked.value.templateId, picked.value.entityIri, entities);
+      if (sparql === null) {
+        new Notice("Ontomark: Jev could not suggest a query (unresolved-target). Write the SPARQL as before.");
+        return;
+      }
+      this.textarea.value = sparql;
+      this.datasetSelect.value = picked.value.dataset;
+      new Notice("Ontomark: query suggested by Jev. Read it, then press Run.");
+    } catch (err) {
+      this.plugin.reportError(err);
+    }
   }
 
   /** Run the query in the textarea against the selected dataset. */

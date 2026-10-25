@@ -73,6 +73,32 @@ Language models are good at reading a note and bad at being trusted with your on
 
 Ingest uses the configured absolute HTTP(S) URL and sends a configured key in an authorisation header. Use an endpoint you trust to handle the note text and credentials. Obsidian's `requestUrl` can follow redirects without exposing the final URL, so the plugin cannot guarantee that the configured host is the only destination. It rejects a 3xx status if one is returned to it; that does not prevent a redirect already followed by the host layer. Redirect behaviour has not received installed-desktop acceptance. See [`ingest-transport.ts`](src/ingest-transport.ts) and [ADR-OBS-003](docs/adr/ADR-OBS-003-ingest-action-and-offline-contract.md).
 
+### Jev option (optional, off by default)
+
+> Proposed research candidates. The wiring and its fallback tests show the option is safe to switch on, not that it helps; none of the three has been evaluated against its baseline.
+
+Jev is TypeSafe's typed-decision model (`POST /v1/systemone`: Choice, Score, Noul). The option adds three opt-in helpers beside the existing ones. **Everything below is off until you turn on *Use Jev typed decisions* in settings *and* type an endpoint.** With it off, no request is built, nothing leaves your machine, and the plugin behaves exactly as before; the commands and the query row below are not even shown.
+
+**What leaves, and where.** Only to the endpoint you type (the full `/v1/systemone` URL; there is no default address and nothing is read from the environment), only when you use one of these actions, and only this:
+
+| Action | Item | What is sent |
+|---|---|---|
+| *Extract facts from this note*, after the engine has grounded the model's answer | OB-01-S1-01 semantic verifier | The note's title, and for each accepted fact its key, the value as it would be written, and the verbatim quote the engine located. Not the rest of the note. |
+| *Suggest query (Jev)* in the SPARQL panel | OB-02-S1-01 query template picker | Your question, the labels and kinds of vault entities it mentions, and the names of the fixed query templates. |
+| *Propose a frontmatter edit from a sentence (Jev)* | OB-03-S1-01 edit proposal | Your sentence, the note's title and current type, and the labels and kinds of entities it mentions. |
+
+Notes are private by default, so the toggle's own text repeats this, and the API key is held in memory only (never in `data.json`) and may be empty for a keyless local endpoint. Prefer a local decision model; use a hosted endpoint only for notes you would send there anyway.
+
+**Authority stays with the engine and with you.** Jev only chooses or checks; it never writes, signs or approves.
+
+- *Verifier.* A fact Jev doubts gets a visible warning in the review dialog. It is dropped only if you set *Withhold facts Jev rates at or below* above 0 (default 0: never), and then the engine's own `ingest_accept` is run again on the surviving proposals, so quote grounding, vocabulary grounding, kind and conflict checks, the source-digest guard and the diff you must Apply all still decide the patch. If the re-run would write anything the plain run did not, the plain result is kept.
+- *Query picker.* Jev picks one of five fixed read-only templates, one entity and a dataset. The SPARQL text is compiled in code (an IRI must be one the index holds) and only placed in the editor; you read it and press Run, under the panel's usual forbidden forms and row/time bounds.
+- *Edit proposal.* Jev picks one of *make class / individual / property* or *add parent* (a parent must be an existing entity with a unique note name). The proposal is built by the same guarded-edit API as the menu commands and shown as a diff. There is no action that sets `public`, creates an entity or edits the body.
+
+**Fallback.** The helper does nothing and the plugin carries on as before, with one line in the console (`ontomark-jev: fallback reason=… question-set=…`, never any note text), when: the switch is off; there is no valid endpoint; the request errors or exceeds **4 s** (no retries); the status is not 2xx (429 and 529 included); the body does not parse; an answer is missing or of the wrong type; a Choice key is outside the offered set; or confidence is below your *Jev minimum confidence* (default 0.6; the verifier uses its own probability test). Question sets are versioned (`ontomark-obsidian.fact-support/1`, `…query-template/1`, `…edit-intent/1`).
+
+The network call is the same single `requestUrl` call assisted ingest uses; `npm run check:bundle` still proves it is named exactly once, in `src/ingest-transport.ts`. The Jev option adds no other network code, no URL literal, and no dependency. The offline release test (`npm run test:offline`) is for the default, switched-off configuration; the enabled path is covered by mocked-transport unit tests (`test/jev.test.ts`), not by a live call.
+
 ### SPARQL in a note
 
 A query that is about a note belongs in that note. In reading view, this block shows every type Rex has, stated or inferred:

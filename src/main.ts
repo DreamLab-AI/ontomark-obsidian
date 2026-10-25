@@ -16,7 +16,11 @@ import { GRAPH_VIEW, GraphView } from "./views/graph-view";
 import { registerSparqlBlock } from "./sparql-block";
 import { confirmWithDiff } from "./views/diff-modal";
 import { confirmIngest } from "./views/ingest-modal";
-import { callModel, endpointProblem, type AbortToken } from "./ingest-transport";
+import { callModel, postJson, type AbortToken } from "./ingest-transport";
+import { endpointProblem } from "./endpoint";
+import { pickEdit, type JevConfig, type JevDeps, type ParentOffer } from "./jev";
+import { judgeIngest } from "./jev-ingest";
+import { mentionedEntities } from "./query-templates";
 
 export { ENTITY_VIEW, QUERY_VIEW, GRAPH_VIEW };
 export type { OntomarkSettings };
@@ -54,12 +58,49 @@ class AddParentModal extends Modal {
   }
 }
 
+class IntentModal extends Modal {
+  private input!: HTMLTextAreaElement;
+
+  constructor(
+    app: App,
+    private readonly path: string,
+    private readonly onSubmit: (intent: string) => void,
+  ) {
+    super(app);
+  }
+
+  override onOpen(): void {
+    this.titleEl.setText(`Propose an edit to ${this.path}`);
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.createEl("p", {
+      text: "Say what the note is or what it belongs to, in a sentence. Your sentence is sent to your configured Jev endpoint; a diff is shown before anything is written.",
+    });
+    this.input = contentEl.createEl("textarea", { attr: { rows: "3", placeholder: "This is a kind of Animal", "data-ontomark": "intent" } });
+    const button = contentEl.createEl("button", { text: "Propose", cls: "mod-cta", attr: { "data-ontomark-action": "propose-jev" } });
+    button.addEventListener("click", () => {
+      const intent = this.input.value.trim();
+      if (!intent) return;
+      this.close();
+      this.onSubmit(intent);
+    });
+  }
+
+  override onClose(): void {
+    this.contentEl.empty();
+  }
+}
+
 export default class OntomarkPlugin extends Plugin {
   api!: OntomarkApi;
   override settings: OntomarkSettings = { ...DEFAULT_SETTINGS };
   ready!: Promise<void>;
   /** Assisted-ingest API key: memory only, never in data.json, cleared on unload. */
   ingestKey = "";
+  /** Jev-option API key: memory only, never in data.json, cleared on unload. */
+  jevKey = "";
+  /** Set on unload so a request still in flight cannot start another. */
+  private unloaded = false;
   /** The extraction in flight, if any; `onunload` aborts it. */
   private ingestRun: AbortToken | null = null;
 
@@ -106,6 +147,8 @@ export default class OntomarkPlugin extends Plugin {
     if (this.ingestRun) this.ingestRun.aborted = true;
     this.ingestRun = null;
     this.ingestKey = "";
+    this.jevKey = "";
+    this.unloaded = true;
     this.apiUnsubscribe?.();
     this.apiUnsubscribe = null;
     this.listeners.clear();
@@ -150,6 +193,28 @@ export default class OntomarkPlugin extends Plugin {
   subscribe(listener: (e: ChangeEvent) => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  /**
+   * The Jev option as configured right now. `enabled` is false once the
+   * plugin has unloaded, and false unless the user turned it on; the endpoint
+   * is only ever the one they typed.
+   */
+  jevConfig(): JevConfig {
+    const s = this.settings;
+    return {
+      enabled: s.jevEnabled && !this.unloaded,
+      endpoint: s.jevEndpoint,
+      model: s.jevModel,
+      key: this.jevKey,
+      withholdAtOrBelow: s.jevWithholdAtOrBelow,
+      minConfidence: s.jevMinConfidence,
+    };
+  }
+
+  /** The one transport Jev requests use: the same `postJson` as assisted ingest. */
+  jevDeps(): JevDeps {
+    return { post: postJson };
   }
 
   confirm(p: PatchProposal): Promise<boolean> {
@@ -421,19 +486,76 @@ export default class OntomarkPlugin extends Plugin {
           run,
         );
         if (run.aborted) return;
-        const result = await this.api.ingestAccept(file.path, request, responses);
+        const plain = await this.api.ingestAccept(file.path, request, responses);
+        // Jev option: off by default. With it off, `judged` is `plain` and the
+        // flow below is the pre-change flow, byte for byte.
+        const cfg = this.jevConfig();
+        const judged = cfg.enabled
+          ? await judgeIngest((r) => this.api.ingestAccept(file.path, request, r), request, responses, plain, cfg, this.jevDeps())
+          : { result: plain, notes: [] };
+        const { result, notes } = judged;
         if (!result.preview) {
-          await confirmIngest(this.app, result);
+          await confirmIngest(this.app, result, notes);
           return;
         }
-        this.announce(await this.api.applyPatch(result.preview, () => confirmIngest(this.app, result)));
+        this.announce(await this.api.applyPatch(result.preview, () => confirmIngest(this.app, result, notes)));
       } finally {
         if (this.ingestRun === run) this.ingestRun = null;
       }
     });
   }
 
+  /**
+   * Jev option (OB-03-S1-01): turn one plain sentence into one of the three
+   * existing guarded edits. Jev only chooses the action and the parent; the
+   * proposal is built by the same API as the menu commands, shown as a diff,
+   * and written only if the user applies it and the file is unchanged.
+   */
+  private proposeEditFromSentence(): void {
+    const file = this.app.workspace.getActiveFile();
+    if (!file) {
+      new Notice("Ontomark: open a note first.");
+      return;
+    }
+    new IntentModal(this.app, file.path, (intent) => {
+      void this.guard(async () => {
+        const cfg = this.jevConfig();
+        if (!cfg.enabled) return;
+        await this.ready;
+        const entities = await this.api.entities();
+        const self = entities.find((e) => e.path === file.path);
+        const noteName = (path: string): string => path.replace(/^.*\//, "").replace(/\.md$/, "");
+        const counts = new Map<string, number>();
+        for (const e of entities) counts.set(noteName(e.path), (counts.get(noteName(e.path)) ?? 0) + 1);
+        const parents: ParentOffer[] = mentionedEntities(intent, entities)
+          .filter((e) => e.path !== file.path && e.kind !== "property" && counts.get(noteName(e.path)) === 1)
+          .map((e) => ({ target: noteName(e.path), label: e.label, kind: e.kind }));
+        const picked = await pickEdit(cfg, this.jevDeps(), intent, { label: self?.label ?? noteName(file.path), kind: self?.kind ?? null }, parents);
+        if (!picked.ok) {
+          new Notice(`Ontomark: Jev could not propose an edit (${picked.reason}). Use the menu commands as before.`);
+          return;
+        }
+        const { action, parent } = picked.value;
+        const proposal =
+          action === "add_parent" && parent !== null
+            ? await this.api.proposeAddParent(file.path, parent)
+            : await this.api.proposeSetType(file.path, action.replace("make_", "") as EntityKind);
+        this.announce(await this.api.applyPatch(proposal, (q) => this.confirm(q)));
+      });
+    }).open();
+  }
+
   private registerCommands(): void {
+    // Listed only while the Jev option is on, so with it off the command palette is unchanged.
+    this.addCommand({
+      id: "jev-propose-edit",
+      name: "Propose a frontmatter edit from a sentence (Jev)",
+      checkCallback: (checking) => {
+        if (!this.jevConfig().enabled) return false;
+        if (!checking) this.proposeEditFromSentence();
+        return true;
+      },
+    });
     this.addCommand({ id: "extract-facts", name: "Extract facts from this note", callback: () => this.extractFacts() });
     this.addCommand({ id: "open-graph", name: "Open ontology graph", callback: () => void this.openGraphView() });
     this.addCommand({ id: "open-panel", name: "Open ontology panel", callback: () => void this.openEntityView() });

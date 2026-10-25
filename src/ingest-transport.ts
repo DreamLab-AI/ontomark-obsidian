@@ -1,4 +1,5 @@
-// The ONLY module that touches the network (ADR-OBS-003 §3). Everything else
+// The ONLY module that touches the network (ADR-OBS-003 §3), through the single
+// `postJson` below, which the optional Jev option (src/jev.ts) shares. Everything else
 // in the plugin stays offline; scripts/check-bundle.mjs proves the network
 // primitive below is named exactly once in the bundle, inside this module.
 //
@@ -68,15 +69,28 @@ function unavailable(detail: string): OntomarkError {
   return new OntomarkError("model_unavailable", `the model endpoint did not answer: ${detail}`);
 }
 
-async function complete(endpoint: string, key: string, body: string): Promise<string> {
+/** A reply as the network primitive hands it back. */
+export interface RawReply {
+  status: number;
+  json: unknown;
+}
+
+/**
+ * The one place a request leaves the plugin. POSTs `body` (already JSON text)
+ * to `url`, with a bearer `key` when one is set, and gives up after
+ * `timeoutMs`. Never follows a decision about the destination: `url` is
+ * exactly what the user typed. Throws a plain `Error` on a timeout or a
+ * failed connection; any HTTP status is returned, not thrown.
+ */
+export async function postJson(url: string, key: string, body: string, timeoutMs: number): Promise<RawReply> {
   let timer: number | undefined;
   const timeout = new Promise<never>((_, reject) => {
-    timer = window.setTimeout(() => reject(unavailable(`no reply within ${TIMEOUT_MS / 1000} s`)), TIMEOUT_MS);
+    timer = window.setTimeout(() => reject(new Error(`no reply within ${timeoutMs / 1000} s`)), timeoutMs);
   });
   try {
     const res = await Promise.race([
       requestUrl({
-        url: endpoint,
+        url,
         method: "POST",
         contentType: "application/json",
         headers: key ? { Authorization: `Bearer ${key}` } : {},
@@ -85,6 +99,15 @@ async function complete(endpoint: string, key: string, body: string): Promise<st
       }),
       timeout,
     ]);
+    return { status: res.status, json: res.json as unknown };
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
+async function complete(endpoint: string, key: string, body: string): Promise<string> {
+  try {
+    const res = await postJson(endpoint, key, body, TIMEOUT_MS);
     if (res.status >= 300 && res.status < 400) {
       throw unavailable(`HTTP ${res.status}: the endpoint redirected; point the setting at the final URL`);
     }
@@ -94,8 +117,6 @@ async function complete(endpoint: string, key: string, body: string): Promise<st
     return typeof content === "string" ? content : "";
   } catch (err) {
     throw err instanceof OntomarkError ? err : unavailable(err instanceof Error ? err.message : String(err));
-  } finally {
-    window.clearTimeout(timer);
   }
 }
 
@@ -108,28 +129,6 @@ async function complete(endpoint: string, key: string, body: string): Promise<st
 /** Set by the host to stop a run between chunks: on unload, or on a user cancel. */
 export interface AbortToken {
   aborted: boolean;
-}
-
-/**
- * Why a URL can be refused as an ingest endpoint, or `null` if it is usable.
- *
- * Obsidian's `requestUrl` follows redirects and reports neither the final
- * URL nor a way to refuse them, so the "exactly one destination" promise
- * rests on the endpoint itself: it must be an absolute `http(s)` URL with no
- * embedded credentials, and the host must answer directly. A 3xx reply is
- * treated as unavailable (see `callModel`) rather than followed.
- */
-export function endpointProblem(endpoint: string): string | null {
-  let u: URL;
-  try {
-    u = new URL(endpoint);
-  } catch {
-    return "the endpoint is not an absolute URL";
-  }
-  if (u.protocol !== "https:" && u.protocol !== "http:") return "the endpoint must use http or https";
-  if (u.username || u.password) return "the endpoint must not embed credentials";
-  if (u.hash) return "the endpoint must not have a #fragment";
-  return null;
 }
 
 export async function callModel(

@@ -2,6 +2,7 @@ import { Modal } from "obsidian";
 import type { App } from "obsidian";
 import type { CandidateAssertion, EvidenceSpan, IngestAcceptResult, Withheld } from "../protocol";
 import { diffLineClass } from "./diff-modal";
+import type { JevNote } from "../jev-ingest";
 
 /** Select `utf16` of the note in the active editor, if that note is open. */
 export type RevealEvidence = (path: string, span: EvidenceSpan["utf16"]) => void;
@@ -17,6 +18,7 @@ class IngestModal extends Modal {
   constructor(
     app: App,
     private readonly result: IngestAcceptResult,
+    private readonly notes: readonly JevNote[],
     private readonly resolveOnce: (value: boolean) => void,
   ) {
     super(app);
@@ -50,6 +52,15 @@ class IngestModal extends Modal {
       li.createSpan({ text: `${a.key} ← ${a.written}` });
       if (a.tier) li.createSpan({ text: ` (${a.tier})`, cls: "ontomark-ingest-tier" });
       for (const ev of a.evidence) this.quote(li, ev);
+      // Jev option annotation: advisory only; Apply and Cancel are unchanged.
+      const note = this.notes.find((n) => n.key === a.key && n.written === a.written);
+      if (note) {
+        li.createSpan({
+          text: `Jev doubts that this quote states the fact (support ${(note.p * 100).toFixed(0)}%). Check it before applying.`,
+          cls: "ontomark-ingest-reason",
+          attr: { "data-ontomark": "jev-note" },
+        });
+      }
     }
   }
 
@@ -105,8 +116,8 @@ class IngestModal extends Modal {
 }
 
 /** Show what was found and what was withheld; resolves true only when the user presses Apply. */
-export function confirmIngest(app: App, result: IngestAcceptResult): Promise<boolean> {
+export function confirmIngest(app: App, result: IngestAcceptResult, notes: readonly JevNote[] = []): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
-    new IngestModal(app, result, resolve).open();
+    new IngestModal(app, result, notes, resolve).open();
   });
 }

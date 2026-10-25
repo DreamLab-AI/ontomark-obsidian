@@ -45,3 +45,4 @@
 /* An in-note `ontomark-sparql` block: the same table as the query view, inside reading view. */
 .ontomark-block { margin: var(--size-4-2) 0; }
 .ontomark-block .ontomark-table { margin-top: 0; }
+.ontomark-ask-input { flex: 1; min-width: 0; }
