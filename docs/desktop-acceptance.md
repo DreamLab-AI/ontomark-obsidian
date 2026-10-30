@@ -22,6 +22,8 @@ Raw MCP receipts are in [evidence](evidence/). The [query screenshot](evidence/d
 
 The graph consumer pins `@dreamlab-ai/ontomark-graph` 0.1.0 from the immutable Ontomark release `ontomark-graph-v0.1.0` (SHA-256 `de491e2d7d947503d3c49c140193c88a9d17cfec5fbb334166002049c8d56aa5`). The same package is consumed by Narrative Goldmine. Installed Obsidian 1.14.4 checks passed with 11 synthetic entities and 17 edges, including 9 inferred edges.
 
+**30 October 2026:** the pin moved to `ontomark-graph` 0.2.0 (release `ontomark-graph-v0.2.0`, SHA-256 `850a8a22e27e2b0861cfd64f1b7eaeaa4b661efff58f7281b95553678ca56f45`), which adds node dragging: dragging a node moves it and it stays where it is dropped, since the plugin runs no layout engine. The build, unit, wasm, bundle and offline checks pass on 0.2.0; the desktop acceptance table below was recorded at 0.1.0 and has not been repeated in Obsidian.
+
 | Check | Result |
 | --- | --- |
 | Keyboard | ArrowLeft from no selection chooses the last entity; ArrowRight wraps to the first. |
