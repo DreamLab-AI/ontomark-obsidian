@@ -145,7 +145,7 @@ Under the plugin sits [Ontomark](https://github.com/DreamLab-AI/ontomark), a Rus
 
 ## Working status
 
-**Reviewed 31 October 2026.** The plugin manifest is **0.4.0**, desktop only, with minimum Obsidian **1.7.2**. [`engine.json`](engine.json) pins Ontomark **v0.6.1**, source `4699ee08`, by SHA-256; that engine reads code fences by the CommonMark rule, so a line such as ```` ```quoted prose``` ```` no longer hides the rest of a note from indexing. Ontomark's current CLI release is a separate product: installing this plugin does not install or upgrade the CLI, and it does not imply the plugin includes later compiler features.
+**Reviewed 31 October 2026.** The plugin manifest is **0.4.1**, desktop only, with minimum Obsidian **1.7.2**. [`engine.json`](engine.json) pins Ontomark **v0.7.0**, source `0caae5d4`, by SHA-256. That engine reads code fences by the CommonMark rule, and its ingest no longer merges names that differ only by a number (`ISO 9001` / `ISO 14001`); note ingest output is otherwise unchanged. Ontomark's current CLI release is a separate product: installing this plugin does not install or upgrade the CLI, and it does not imply the plugin includes later compiler features.
 
 The [desktop acceptance record](docs/desktop-acceptance.md) identifies the tested Linux Obsidian version, synthetic vaults, plugin/engine revisions and observed behaviours. It covers indexing, query, graph navigation and reviewed edits, with additional ingest checks against a local stub. It does not establish mobile support, performance of this exact release on every vault, or successful integration with a real remote model.
 
@@ -170,7 +170,7 @@ Ontomark is in the community directory: **Settings → Community plugins → Bro
 
 To install by hand instead:
 
-1. Download [ontomark-obsidian-0.4.0.zip](https://github.com/DreamLab-AI/ontomark-obsidian/releases/download/0.4.0/ontomark-obsidian-0.4.0.zip) from the [0.4.0 release](https://github.com/DreamLab-AI/ontomark-obsidian/releases/tag/0.4.0).
+1. Download [ontomark-obsidian-0.4.1.zip](https://github.com/DreamLab-AI/ontomark-obsidian/releases/download/0.4.1/ontomark-obsidian-0.4.1.zip) from the [0.4.1 release](https://github.com/DreamLab-AI/ontomark-obsidian/releases/tag/0.4.1).
 2. Extract it into `<vault>/.obsidian/plugins/`; it creates an `ontomark` folder.
 3. **Settings → Community plugins**, enable Ontomark, reload if Obsidian was open.
 
