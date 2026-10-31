@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -63,7 +63,17 @@ function replay(engine) {
   return lines.join("\n") + "\n";
 }
 
-const golden = readFileSync(join(fixtures, "transcript.golden.jsonl"), "utf8");
+// `ONTOMARK_BLESS=1` rewrites the golden from the nodejs-target replay, as the
+// native test's switch does. Bless only an engine whose wasm already matched
+// its native golden on Ontomark's own fixtures (the `plugin` job of
+// Ontomark's CI, scripts/test-plugin-consumer.sh): this vault is a superset
+// of those fixtures, so its golden has no native writer of its own.
+const goldenPath = join(fixtures, "transcript.golden.jsonl");
+if (process.env.ONTOMARK_BLESS) {
+  const { WasmEngine } = createRequire(import.meta.url)(join(generated, "node/ontomark_wasm.js"));
+  writeFileSync(goldenPath, replay(new WasmEngine()));
+}
+const golden = readFileSync(goldenPath, "utf8");
 
 test("nodejs-target wasm replays the script byte-identically to native", () => {
   const require = createRequire(import.meta.url);

@@ -1,7 +1,7 @@
 {
   "id": "ontomark",
   "name": "Ontomark",
-  "version": "0.3.8",
+  "version": "0.4.0",
   "minAppVersion": "1.7.2",
   "description": "Ontologies in Markdown: index typed notes, run local OWL 2 EL reasoning and SPARQL, apply reviewed frontmatter edits, and optionally extract facts, or get Jev typed decisions, from an endpoint you choose. Offline by default.",
   "author": "DreamLab AI",
