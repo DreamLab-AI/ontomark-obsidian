@@ -1,9 +1,22 @@
+---
+id: ADR-OBS-002
+title: "a small Obsidian surface for shared assisted ingest"
+date: 2026-10-12
+decision_status: proposed
+implementation_status: none
+activation_status: inactive
+supersedes: []
+superseded_by: []
+verified_commit: ""
+verified_paths: []
+owner: jjohare
+review_trigger: "the plugin-side ingest decision (ADR-OBS-003) is accepted or rejected, or the estate hand-off notes in this record are taken up by their owners"
+repo: ontomark-obsidian
+---
+
 # ADR-OBS-002: a small Obsidian surface for shared assisted ingest
 
-- Date: 2026-10-12
-- Decision status: proposed
 - Implementation status: none in this plugin. The shared core landed in Ontomark as `ontomark-ingest` ([`582cfa0`](https://github.com/DreamLab-AI/ontomark/commit/582cfa0), [ADR-OM-003](https://github.com/DreamLab-AI/ontomark/blob/main/docs/adr/ADR-OM-003-native-assisted-ingest.md)); the plugin-side decision is [ADR-OBS-003](ADR-OBS-003-ingest-action-and-offline-contract.md).
-- Activation status: inactive
 - Scope: this repository's product boundary and hand-off notes for the wider ADR fleet
 
 ## Product decision

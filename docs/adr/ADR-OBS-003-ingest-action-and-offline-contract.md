@@ -1,9 +1,22 @@
+---
+id: ADR-OBS-003
+title: "one ingest action, and what it does to the offline contract"
+date: 2026-10-12
+decision_status: proposed
+implementation_status: none
+activation_status: inactive
+supersedes: []
+superseded_by: []
+verified_commit: ""
+verified_paths: []
+owner: jjohare
+review_trigger: "the open question on the proposal route is answered, or ontomark-ingest ships in a released engine the plugin pins"
+repo: ontomark-obsidian
+---
+
 # ADR-OBS-003: one ingest action, and what it does to the offline contract
 
-- Date: 2026-10-12
-- Decision status: proposed
 - Implementation status: none in this plugin. The shared core it would call landed in Ontomark as `ontomark-ingest` at [`582cfa0`](https://github.com/DreamLab-AI/ontomark/commit/582cfa0) ([ADR-OM-003](https://github.com/DreamLab-AI/ontomark/blob/main/docs/adr/ADR-OM-003-native-assisted-ingest.md)); it is not yet in a released engine.
-- Activation status: inactive
 - Related: [ADR-OBS-002](ADR-OBS-002-assisted-ingest-boundary-and-estate-notes.md) (boundary and estate notes, which this ADR narrows to a plugin decision), [ADR-OBS-001](ADR-OBS-001-shared-graph.md)
 
 ## Context

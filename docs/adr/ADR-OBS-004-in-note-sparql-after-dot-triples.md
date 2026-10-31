@@ -1,9 +1,28 @@
+---
+id: ADR-OBS-004
+title: "SPARQL in a note, after Dot Triples"
+date: 2026-10-13
+decision_status: accepted
+implementation_status: partial
+activation_status: live
+supersedes: []
+superseded_by: []
+verified_commit: "6dd648b2068377077d9118c4e678479d5fe64eb1"
+verified_paths: []
+owner: jjohare
+review_trigger: "a change to the ontomark-sparql fence, the rewriting rules, or Dot Triples' licence"
+repo: ontomark-obsidian
+---
+
 # ADR-OBS-004: SPARQL in a note, after Dot Triples
 
-- Date: 2026-10-13
 - Decision status: accepted (owner request: "adopt the good stuff with attribution")
 - Implementation status: active in 0.3.0. `src/sparql-rewrite.ts` (pure rewriting), `src/sparql-block.ts` (the `ontomark-sparql` fence), `src/views/query-render.ts` (table shared with the query view). Unit tests `test/sparql-rewrite.test.ts`; offline end-to-end checks in `test/e2e/offline.e2e.cjs` (EXP-13).
 - Related: [ADR-OBS-001](ADR-OBS-001-shared-graph.md) (the plugin owns Obsidian surfaces, the engine owns semantics); engine [ADR-OM-006](https://github.com/DreamLab-AI/ontomark/blob/main/docs/adr/ADR-OM-006-dot-triples-interop.md) (the bridge and the wider decision).
+
+Status mapping 2026-10-31: the record's `Implementation status: active in 0.3.0` is not a checker value. `activation_status: live` follows its word "active"; `implementation_status: partial` is the conservative reading because the record does not say "complete". Owner to confirm.
+
+Verification 2026-10-31: `verified_commit` is this record's own last-modified commit, recorded when the record was moved onto the estate ledger format. It is not a re-verification of the code the record describes, and `verified_paths` is empty, so the staleness gate is not yet armed for this record.
 
 ## Context
 

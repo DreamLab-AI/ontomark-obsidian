@@ -1,0 +1,4 @@
+{
+  "repo": "ontomark-obsidian",
+  "regenerate": "bash scripts/adr-ledger.sh write"
+}

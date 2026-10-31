@@ -1,9 +1,28 @@
+---
+id: ADR-OBS-005
+title: "Excluded folders are the host's job"
+date: 2026-10-17
+decision_status: accepted
+implementation_status: partial
+activation_status: live
+supersedes: []
+superseded_by: []
+verified_commit: "7b4f545ecfc75ae530c3b7a37edc401b5dbc9a28"
+verified_paths: []
+owner: jjohare
+review_trigger: "a change to the excluded-folders setting, its default, or its matching rules"
+repo: ontomark-obsidian
+---
+
 # ADR-OBS-005: Excluded folders are the host's job
 
-- Date: 2026-10-17
 - Decision status: accepted (owner request: generalise the plugin for ordinary vaults)
 - Implementation status: active in 0.3.5. `src/excludes.ts` (pure rules), `src/main.ts` (applied at the initial index and on every vault event), `src/settings.ts` (the `Excluded folders` control). Unit tests `test/excludes.test.ts`; offline end-to-end checks in `test/e2e/offline.e2e.cjs`.
 - Related: [ADR-OBS-001](ADR-OBS-001-shared-graph.md) (the plugin owns Obsidian surfaces, the engine owns semantics); engine [ADR-OM-007](https://github.com/DreamLab-AI/ontomark/blob/main/docs/adr/ADR-OM-007-flat-obsidian-vaults.md) (flat vaults and the compiler's built-in excluded-folder list).
+
+Status mapping 2026-10-31: the record's `Implementation status: active in 0.3.5` is not a checker value. `activation_status: live` follows its word "active"; `implementation_status: partial` is the conservative reading because the record does not say "complete". Owner to confirm.
+
+Verification 2026-10-31: `verified_commit` is this record's own last-modified commit, recorded when the record was moved onto the estate ledger format. It is not a re-verification of the code the record describes, and `verified_paths` is empty, so the staleness gate is not yet armed for this record.
 
 ## Context
 

@@ -11,3 +11,15 @@ jobs:
       - run: npm ci --include=dev
       - run: npm run build && npm test && npm run test:wasm && npm run check:bundle
       - run: npm run test:offline
+  adr-ledger:
+    # Estate ADR ledger gate (docs/adr/.ledger.json). The checker is fetched from
+    # agentbox at a pinned commit and verified against a pinned sha256 by
+    # scripts/adr-ledger.sh; nothing is vendored.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Records valid, supersession reciprocal, docs/adr/README.md in sync
+        run: bash scripts/adr-ledger.sh check
