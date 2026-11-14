@@ -8,6 +8,16 @@ This file covers the portable rc1 engine source `21cd9ffd7b08317248afb4e06b74b65
 
 The `ontomark-sparql` code block (`src/sparql-rewrite.ts`, `src/sparql-block.ts`) follows the `dot-sparql` block of Cristian Vasquez's Dot Triples plugin, https://github.com/cristianvasquez/dot-triples-plugin (MIT), and the `__THIS__` and `[[Note]]` tokens are his. The implementation is independent and no source from that project is included, so no licence text is reproduced here; `docs/adr/ADR-OBS-004-in-note-sparql-after-dot-triples.md` carries the credit.
 
+## Graph layout engine: vowl-wasm 0.2.3 (MIT)
+
+Since the graph view gained a force layout (after release 0.5.0, not yet released) it embeds the force-layout simulation of `@dreamlab-ai/vowl-wasm` 0.2.3 (https://github.com/DreamLab-AI/vowl-wasm, MIT, release asset `vowl-wasm-0.2.3-pkg.tgz`, source `756f49f5ab7bac9a97b3701157bb923da34abe22`) as a second WebAssembly module inside `main.js`, together with its generated JavaScript glue. It is a clean-room implementation of the VOWL notation; WebVOWL's MIT notice is retained in its licence. Its Rust dependency closure (53 package/version pairs) is distinct from the Ontomark engine's, so its own companion files are kept here unmodified, exactly as the package ships them, in [`third-party/vowl-wasm-0.2.3/`](third-party/vowl-wasm-0.2.3/):
+
+- `LICENSE`: the package licence, with the WebVOWL notice;
+- `THIRD-PARTY-NOTICES.md`: the complete dependency and Rust runtime notices (the package asks that this companion stay with redistributions);
+- `UPSTREAMS.md`: the dependency inventory with source links.
+
+None of its declared licences is MPL-2.0, so the MPL source-availability list below is unchanged. The graph package itself, `@dreamlab-ai/ontomark-graph` 0.3.0, is MIT OR Apache-2.0, the same terms as this project.
+
 ## MPL source availability
 
 The embedded engine uses these unchanged libraries under the Mozilla Public License 2.0. Their complete source packages, with the original notices, are available at:

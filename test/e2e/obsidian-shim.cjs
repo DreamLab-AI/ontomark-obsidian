@@ -73,6 +73,9 @@ class FakeEl {
     this.attrs[k] = v === null ? undefined : String(v);
     if (k === "value") this.value = String(v);
   }
+  setAttribute(k, v) {
+    this.setAttr(k, v);
+  }
   getAttr(k) {
     return this.attrs[k] ?? null;
   }

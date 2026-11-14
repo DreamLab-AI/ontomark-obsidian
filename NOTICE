@@ -13,7 +13,9 @@ VisionClaw.
 
 ## Runtime components
 
-This distribution bundles Ontomark’s WASM engine and shared graph renderer.
+This distribution bundles Ontomark’s WASM engine, the shared graph renderer
+and its layout driver, and the vowl-wasm force-layout engine (MIT; its notices
+are in third-party/vowl-wasm-0.2.3/).
 Whelk/Whelk-rs and Oxigraph attribution and complete dependency licence texts
 are preserved in THIRD-PARTY-NOTICES.md. The shared graph adapts Narrative
 Goldmine behaviour: https://github.com/jjohare/visionGraph .

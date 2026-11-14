@@ -78,8 +78,13 @@ for (const u of urls) if (!allowedUrl.test(u)) findings.push(`URL literal: ${u}`
 const wasmMagicB64 = "AGFzbQ"; // base64 of \0asm
 const embedded = src.includes(wasmMagicB64);
 if (!embedded) findings.push("embedded wasm not found");
+// The graph view's layout engine (vowl-wasm) is a second embedded module, so the
+// check above alone no longer proves the Ontomark engine is present: expect both.
+const wasmPayloads = [...src.matchAll(/\(\s*["'`]AGFzbQ/g)].length;
+const layoutEmbedded = wasmPayloads >= 2;
+if (!layoutEmbedded) findings.push(`expected the Ontomark engine and the layout engine as embedded wasm payloads, found ${wasmPayloads}`);
 const workerEmbedded = src.includes("classify_start");
 if (!workerEmbedded) findings.push("embedded worker source not found");
 
-console.log(JSON.stringify({ file, bytes: statSync(file).size, urls: [...urls].sort(), request_url: { in_bundle: netHits, ...netLocation }, embedded_wasm: embedded, embedded_worker: workerEmbedded, findings }, null, 2));
+console.log(JSON.stringify({ file, bytes: statSync(file).size, urls: [...urls].sort(), request_url: { in_bundle: netHits, ...netLocation }, embedded_wasm: embedded, embedded_wasm_payloads: wasmPayloads, embedded_worker: workerEmbedded, findings }, null, 2));
 process.exit(findings.length ? 1 : 0);

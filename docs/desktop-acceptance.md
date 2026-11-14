@@ -74,3 +74,26 @@ A second run used the property name Ontomark documents, `subclass-of`, with the 
 [Screenshot](evidence/bases-scalar-vs-list.png) of the first run: "2 results", BlockList and FlowList. Obsidian stores a lone value as text, so list functions skip it. The engine (0.2.2) still asserts the edge from all three forms and reports the lone scalar as an info-level `scalar_relation` note, as shown by a probe of the built WASM bundle, which also returned no note for either list form and `unquoted_wikilink` for the unquoted `[[A]]`. Assisted ingest is the plugin's only writer: it writes link relations as lists and promotes an existing lone value to a list, while single literals such as dates stay scalars.
 
 The README screenshots were refreshed the same day from plugin 0.3.3 installed in that vault (engine `v0.2.2`, source `150b42053dd9641163ec4d574c9b21e02c06009e`, verified by the SHA-256 in `engine.json`): the panel header reads `whelk-el 0.2.2`, the in-note `ontomark-sparql` block returned five rows for Rex, and the panel listed the `scalar_relation` info note beside an error and a warning. Two temporary notes were added for the last two screenshots and deleted; the vault's own notes were not changed. Release gates for 0.3.3: build with the provenance check on, 32 unit tests, the WASM harness (4), the bundle check (no findings), and the offline test under `docker --network none` (57 checks passed).
+
+## Graph force layout (not yet run in installed Obsidian)
+
+The graph view now arranges nodes with the `vowl-wasm` 0.2.3 force simulation, driven by `@dreamlab-ai/ontomark-graph` 0.3.0 (`/layout`), instead of leaving them on the renderer's seed spiral. The WebAssembly bytes are embedded in `main.js` and compiled with `WebAssembly.compile` on first use of the view, with no fetch.
+
+What was checked without Obsidian: unit tests with a fake simulation and the real shared driver (call order, node counts agreeing at every place the view changes the graph, teardown order, late initialisation after close, fallback on failure); the built bundle (`check:bundle`: no fetch, `import.meta` or other forbidden string, two embedded WebAssembly payloads); and the real simulation, bundled with the same loader settings, settled a 200-node test graph under Node 22, with pin and unpin returning true. The offline test under `docker --network none` passes, but it does not open the graph view, so it says nothing about this change. No timings were taken.
+
+Not yet run in installed Obsidian (desktop, Linux or another platform). None of these has been observed:
+
+| Check | Expected result |
+| --- | --- |
+| Open **Ontology graph** on the synthetic vault | Nodes move from the starting spiral into a hierarchy-shaped arrangement and stop moving; the view fits itself while they move. |
+| Pan or scroll-zoom while it settles | The view stops re-fitting; the reader's pan and zoom are kept. |
+| Drag a node | It follows the pointer, neighbours follow it, and it is released to the layout on drop. |
+| Select an entity, then **Neighbourhood**, then **All nodes** | Each shows the right subset, laid out, with no error in the console and no stale positions. |
+| Click an entity in the list | The full graph returns with the viewport kept and the entity selected. |
+| **Classify** or edit a note while the graph is open | The graph refreshes; nodes that were already placed stay near where they were. |
+| Toggle **Include inferred** | Edges appear or disappear and the layout settles again. |
+| Close the graph tab and reopen it | No error; the layout runs again; no leftover animation after close. |
+| Open the plugin and never open the graph | Nothing extra is decoded or compiled (check the console and the memory profile). |
+| Developer console with the network panel open | No request is made when the graph opens. |
+| Platform without usable WebAssembly compile on the main thread | The graph still draws on starting positions, with "layout unavailable" in the status line. |
+| Large vault (thousands of entities) | Typing in the search box, panning and dragging stay responsive while the layout runs. Record the entity count and the frame behaviour; no figure is claimed here. |
