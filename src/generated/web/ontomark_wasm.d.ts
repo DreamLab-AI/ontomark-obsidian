@@ -26,6 +26,13 @@ export class WasmEngine {
 }
 
 /**
+ * Prepare a review binding and report source freshness without modifying it.
+ * `keys_json` is `null` for the whole page or a non-empty JSON array of keys.
+ * The returned JSON contains either `error` or `content_digest` and counts.
+ */
+export function review_binding(source: string, keys_json: string): string;
+
+/**
  * The crate version.
  */
 export function version(): string;
@@ -35,6 +42,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_wasmengine_free: (a: number, b: number) => void;
+    readonly review_binding: (a: number, b: number, c: number, d: number) => [number, number];
     readonly version: () => [number, number];
     readonly wasmengine_generation: (a: number) => number;
     readonly wasmengine_handle: (a: number, b: number, c: number) => [number, number];
@@ -42,9 +50,9 @@ export interface InitOutput {
     readonly __wbindgen_exn_store: (a: number) => void;
     readonly __externref_table_alloc: () => number;
     readonly __wbindgen_externrefs: WebAssembly.Table;
-    readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+    readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_start: () => void;
 }
 
