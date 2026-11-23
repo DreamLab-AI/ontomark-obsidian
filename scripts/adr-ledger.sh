@@ -16,8 +16,8 @@
 set -euo pipefail
 
 ADR_CHECKER_REPO="DreamLab-AI/agentbox"
-ADR_CHECKER_SHA="8bd4314d19bb72236a8eeb09e53636a22831cc5b"
-ADR_CHECKER_SHA256="667c90dbbf730bfba3291a2b2106a75f2f446712204571237f343d97590a7e62"
+ADR_CHECKER_SHA="1ea5494a1a9eca5e8da62a3f7db7354970b1c0f2"
+ADR_CHECKER_SHA256="58c4bfcfa5732931c277605875f7c4c58d7622b0a7ff759e38341ed57c30e04c"
 # Overridable only to point at a mirror or a file:// copy; the sha256 still applies.
 ADR_CHECKER_URL="${ADR_CHECKER_URL:-https://raw.githubusercontent.com/${ADR_CHECKER_REPO}/${ADR_CHECKER_SHA}/scripts/adr-index-gen.js}"
 
