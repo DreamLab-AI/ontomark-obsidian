@@ -1,4 +1,6 @@
 import { PluginSettingTab, Setting } from "obsidian";
+import { RECOMMENDED_LAYOUT_PARAMS } from "@dreamlab-ai/ontomark-graph/layout";
+import type { LayoutParams } from "@dreamlab-ai/ontomark-graph/layout";
 import type { App, SettingDefinitionItem, SettingGroup, SettingGroupItem } from "obsidian";
 import { DEFAULT_EXCLUDED_FOLDERS, folderListProblem, parseFolderList } from "./excludes";
 import { endpointProblem } from "./endpoint";
@@ -29,6 +31,14 @@ export interface OntomarkSettings {
   jevMinConfidence: number;
   /** Accept plain-http ingest and Jev endpoints on hosts other than this machine. Off by default. */
   allowInsecureHttp: boolean;
+  /** Graph layout: every node is a disc of this radius in world units, so nodes settle at least twice it apart. 0 = no collision. */
+  graphCollideRadius: number;
+  /** Graph layout: share of an overlap resolved per pass, 0 to 1. */
+  graphCollideStrength: number;
+  /** Graph layout: collision passes per simulation tick, 1 to 16. */
+  graphCollideIterations: number;
+  /** Graph layout: pull of each disconnected component toward the centre, 0 to 1. 0 = off. */
+  graphComponentGravity: number;
 }
 
 export const DEFAULT_SETTINGS: OntomarkSettings = {
@@ -44,7 +54,46 @@ export const DEFAULT_SETTINGS: OntomarkSettings = {
   jevWithholdAtOrBelow: 0,
   jevMinConfidence: DEFAULT_MIN_CONFIDENCE,
   allowInsecureHttp: false,
+  // The shared renderer draws nodes at up to 12 px radius plus a label; these
+  // are the vowl-wasm 0.4.0 settings chosen for that size.
+  graphCollideRadius: RECOMMENDED_LAYOUT_PARAMS.collideRadius,
+  graphCollideStrength: RECOMMENDED_LAYOUT_PARAMS.collideStrength,
+  graphCollideIterations: RECOMMENDED_LAYOUT_PARAMS.collideIterations,
+  graphComponentGravity: RECOMMENDED_LAYOUT_PARAMS.componentGravity,
 };
+
+/** The four graph layout settings, their accepted range and whether they must be whole numbers. */
+export const GRAPH_LAYOUT_RANGES = {
+  graphCollideRadius: { min: 0, max: 200, integer: false },
+  graphCollideStrength: { min: 0, max: 1, integer: false },
+  graphCollideIterations: { min: 1, max: 16, integer: true },
+  graphComponentGravity: { min: 0, max: 1, integer: false },
+} as const;
+export type GraphLayoutKey = keyof typeof GRAPH_LAYOUT_RANGES;
+const GRAPH_LAYOUT_KEYS = Object.keys(GRAPH_LAYOUT_RANGES) as GraphLayoutKey[];
+
+export function isGraphLayoutKey(key: string): key is GraphLayoutKey {
+  return Object.prototype.hasOwnProperty.call(GRAPH_LAYOUT_RANGES, key);
+}
+
+/** A message when `v` is not a number the graph layout setting `key` accepts. */
+export function graphLayoutProblem(key: GraphLayoutKey, v: string): string | undefined {
+  const { min, max, integer } = GRAPH_LAYOUT_RANGES[key];
+  const t = v.trim();
+  const n = Number(t);
+  const ok = t !== "" && Number.isFinite(n) && n >= min && n <= max && (!integer || Number.isInteger(n));
+  return ok ? undefined : `enter a ${integer ? "whole number" : "number"} from ${min} to ${max}`;
+}
+
+/** The layout engine's parameters (vowl-wasm `NggExplorer.setParam` keys) for the current settings. */
+export function graphLayoutParams(settings: OntomarkSettings): LayoutParams {
+  return {
+    collideRadius: settings.graphCollideRadius,
+    collideStrength: settings.graphCollideStrength,
+    collideIterations: settings.graphCollideIterations,
+    componentGravity: settings.graphComponentGravity,
+  };
+}
 
 /** Merge saved data over the defaults, repairing a value an older version or a hand edit left malformed. */
 export function normaliseSettings(saved: Partial<OntomarkSettings> | null | undefined): OntomarkSettings {
@@ -59,6 +108,10 @@ export function normaliseSettings(saved: Partial<OntomarkSettings> | null | unde
   merged.jevWithholdAtOrBelow = unit(merged.jevWithholdAtOrBelow, DEFAULT_SETTINGS.jevWithholdAtOrBelow);
   merged.jevMinConfidence = unit(merged.jevMinConfidence, DEFAULT_SETTINGS.jevMinConfidence);
   for (const k of ["jevEndpoint", "jevModel"] as const) if (typeof merged[k] !== "string") merged[k] = "";
+  for (const k of GRAPH_LAYOUT_KEYS) {
+    const v = merged[k] as unknown;
+    if (typeof v !== "number" || graphLayoutProblem(k, String(v))) merged[k] = DEFAULT_SETTINGS[k];
+  }
   return merged;
 }
 
@@ -138,6 +191,36 @@ export class OntomarkSettingTab extends PluginSettingTab {
           placeholder: "templates, assets",
           validate: (v: string): string | undefined => folderListProblem(v),
         },
+      },
+      {
+        type: "group",
+        heading: "Graph layout",
+        items: [
+          {
+            name: "Node spacing",
+            desc: "Collision radius in graph units: nodes settle at least twice this far apart, so their discs and labels do not overlap. 21 suits the graph's node sizes; 14 packs tighter. 0 turns collision off.",
+            aliases: ["graph", "layout", "collision", "overlap", "collideRadius"],
+            control: { type: "text", key: "graphCollideRadius", defaultValue: String(DEFAULT_SETTINGS.graphCollideRadius), validate: (v: string): string | undefined => graphLayoutProblem("graphCollideRadius", v) },
+          },
+          {
+            name: "Collision strength",
+            desc: "A number from 0 to 1: the share of an overlap pushed apart per pass.",
+            aliases: ["graph", "layout", "collision", "collideStrength"],
+            control: { type: "text", key: "graphCollideStrength", defaultValue: String(DEFAULT_SETTINGS.graphCollideStrength), validate: (v: string): string | undefined => graphLayoutProblem("graphCollideStrength", v) },
+          },
+          {
+            name: "Collision passes",
+            desc: "A whole number from 1 to 16: collision passes per simulation step. More passes separate crowded nodes sooner and cost more time.",
+            aliases: ["graph", "layout", "collision", "collideIterations"],
+            control: { type: "text", key: "graphCollideIterations", defaultValue: String(DEFAULT_SETTINGS.graphCollideIterations), validate: (v: string): string | undefined => graphLayoutProblem("graphCollideIterations", v) },
+          },
+          {
+            name: "Component gravity",
+            desc: "A number from 0 to 1: how strongly each disconnected group of nodes is drawn toward the centre, so fragments stay near the main graph. 0 turns it off.",
+            aliases: ["graph", "layout", "gravity", "componentGravity"],
+            control: { type: "text", key: "graphComponentGravity", defaultValue: String(DEFAULT_SETTINGS.graphComponentGravity), validate: (v: string): string | undefined => graphLayoutProblem("graphComponentGravity", v) },
+          },
+        ],
       },
       {
         type: "group",
@@ -239,7 +322,7 @@ export class OntomarkSettingTab extends PluginSettingTab {
   override getControlValue(key: string): unknown {
     if (!isKey(key)) return undefined;
     const value = this.plugin.settings[key];
-    if (key === "queryLimit" || key === "jevWithholdAtOrBelow" || key === "jevMinConfidence") return String(value);
+    if (key === "queryLimit" || key === "jevWithholdAtOrBelow" || key === "jevMinConfidence" || isGraphLayoutKey(key)) return String(value);
     if (key === "excludedFolders") return this.plugin.settings.excludedFolders.join(", ");
     return value;
   }
@@ -263,6 +346,13 @@ export class OntomarkSettingTab extends PluginSettingTab {
       return;
     }
     if ((key === "jevWithholdAtOrBelow" || key === "jevMinConfidence") && unitProblem(String(value ?? ""))) return; // the control shows the message
+    if (isGraphLayoutKey(key)) {
+      if (graphLayoutProblem(key, String(value ?? ""))) return; // the control shows the message
+      settings[key] = Number(value);
+      await this.plugin.saveSettings();
+      this.plugin.applyGraphLayout();
+      return;
+    }
     // Dropdown controls hand back strings; the row limit is stored as a number.
     settings[key] =
       key === "queryLimit" || key === "jevWithholdAtOrBelow" || key === "jevMinConfidence"

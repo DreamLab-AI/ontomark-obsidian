@@ -2,7 +2,9 @@ import { ItemView, TFile } from "obsidian";
 import type { WorkspaceLeaf } from "obsidian";
 import {hierarchyGraph, mountGraph, neighbourhood} from "@dreamlab-ai/ontomark-graph";
 import type {GraphData, GraphNode, GraphView as SharedGraphView} from "@dreamlab-ai/ontomark-graph";
+import type {LayoutParams} from "@dreamlab-ai/ontomark-graph/layout";
 import {GraphLayoutController} from "../graph-layout";
+import {graphLayoutParams} from "../settings";
 import type OntomarkPlugin from "../main";
 
 export const GRAPH_VIEW="ontomark-graph";
@@ -48,6 +50,8 @@ export class GraphView extends ItemView {
       // A dynamic import keeps the layout WASM undecoded until a graph exists to lay out.
       loadEngine:async()=>(await import("../layout-engine")).loadVowlEngine(),
       onUnavailable:message=>{this.layoutNote=message;this.renderStatus();},
+      // The plugin's Graph layout settings (vowl-wasm collision and component gravity).
+      params:graphLayoutParams(this.plugin.settings),
     });
     // Once the reader pans or zooms, the view stops re-fitting itself as the layout moves.
     for(const type of ["pointerdown","wheel"])this.graphEl.addEventListener(type,()=>this.layout?.interacted());
@@ -57,6 +61,8 @@ export class GraphView extends ItemView {
     this.unsubscribe=this.plugin.subscribe(e=>{if(e.type==="indexed"||e.type==="classified")void this.refresh();});
     await this.refresh();
   }
+  /** New graph layout settings: the running layout restarts warm with them. */
+  setLayoutParams(params:LayoutParams):void{this.layout?.setParams(params);}
   override async onClose():Promise<void>{this.closed=true;this.request++;this.unsubscribe?.();this.unsubscribe=null;this.layout?.destroy();this.layout=null;this.renderer?.destroy();this.renderer=null;this.contentEl.empty();}
   async refresh():Promise<void>{
     const request=++this.request;

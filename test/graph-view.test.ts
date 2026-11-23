@@ -25,6 +25,7 @@ const h = vi.hoisted(() => {
     engineRequests: 0,
     failEngine: false,
     gate: null as null | Promise<void>,
+    params: [] as Record<string, number>[],
   };
   return { log, state };
 });
@@ -92,6 +93,11 @@ vi.mock("../src/layout-engine", () => ({
         return true;
       },
       reheat() {},
+      setParams(params: Record<string, number>) {
+        h.state.params.push({ ...params });
+        h.log.push("engine.setParams");
+        return { applied: Object.keys(params), ignored: [] };
+      },
       dispose() {
         h.state.disposed++;
         h.log.push("engine.dispose");
@@ -101,6 +107,8 @@ vi.mock("../src/layout-engine", () => ({
 }));
 
 import { GraphView } from "../src/views/graph-view";
+import { DEFAULT_SETTINGS } from "../src/settings";
+import { RECOMMENDED_LAYOUT_PARAMS } from "@dreamlab-ai/ontomark-graph/layout";
 import type OntomarkPlugin from "../src/main";
 import type { ChangeEvent } from "../src/api";
 
@@ -120,6 +128,7 @@ function fakePlugin() {
   const listeners = new Set<(e: ChangeEvent) => void>();
   return {
     ready: Promise.resolve(),
+    settings: { ...DEFAULT_SETTINGS },
     api: { index: async () => index },
     subscribe: (l: (e: ChangeEvent) => void) => {
       listeners.add(l);
@@ -147,7 +156,7 @@ const settle = () => vi.advanceTimersByTimeAsync(500);
 beforeEach(() => {
   vi.useFakeTimers();
   h.log.length = 0;
-  Object.assign(h.state, { options: null, setGraphs: [], positions: 0, destroyed: 0, mounts: 0, loads: [], pins: [], unpins: 0, disposed: 0, engineRequests: 0, failEngine: false, gate: null });
+  Object.assign(h.state, { options: null, setGraphs: [], positions: 0, destroyed: 0, mounts: 0, loads: [], pins: [], unpins: 0, disposed: 0, engineRequests: 0, failEngine: false, gate: null, params: [] });
   h.state.graph = { nodes: [], edges: [] };
 });
 afterEach(() => {
@@ -286,6 +295,28 @@ describe("graph view layout", () => {
     expect(h.state.loads).toEqual([]);
     await view.onClose();
     warn.mockRestore();
+  });
+
+  it("starts the layout with the Graph layout settings, which default to the recommended parameters", async () => {
+    const { view } = await open();
+    await settle();
+    expect(h.state.params).toEqual([{ ...RECOMMENDED_LAYOUT_PARAMS }]);
+    // Parameters are set before the first graph is loaded.
+    expect(h.log.indexOf("engine.setParams")).toBeLessThan(h.log.indexOf("engine.load(5)"));
+    await view.onClose();
+  });
+
+  it("passes a settings change to the running layout without reloading the graph", async () => {
+    const { view } = await open();
+    await settle();
+    const positions = h.state.positions;
+    view.setLayoutParams({ ...RECOMMENDED_LAYOUT_PARAMS, collideRadius: 0 });
+    await settle();
+    expect(h.state.params.at(-1)).toEqual({ ...RECOMMENDED_LAYOUT_PARAMS, collideRadius: 0 });
+    expect(h.state.loads).toEqual([5]);
+    // The layout restarted warm and reported new positions.
+    expect(h.state.positions).toBeGreaterThan(positions);
+    await view.onClose();
   });
 
   it("reopening the view starts a fresh layout", async () => {

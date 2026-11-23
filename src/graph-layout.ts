@@ -5,7 +5,7 @@
 // same graph and node order. An engine that is slow to load, fails to load or
 // fails later never breaks the view; the renderer keeps the positions it has.
 import { createLayout } from "@dreamlab-ai/ontomark-graph/layout";
-import type { Layout, LayoutEngine, LayoutOptions } from "@dreamlab-ai/ontomark-graph/layout";
+import type { Layout, LayoutEngine, LayoutOptions, LayoutParams } from "@dreamlab-ai/ontomark-graph/layout";
 import type { GraphData, GraphNode } from "@dreamlab-ai/ontomark-graph";
 
 /** The parts of the shared renderer's view this controller drives. */
@@ -20,6 +20,8 @@ export interface GraphLayoutOptions {
   loadEngine: () => Promise<LayoutEngine>;
   /** Called with a short message when the layout is unavailable; the view then keeps the renderer's own positions. */
   onUnavailable?: (message: string) => void;
+  /** Engine parameters for the first layout (the plugin passes its graph layout settings). Without them the engine keeps its defaults. */
+  params?: LayoutParams;
   /** Test seams: the driver factory and its scheduler. */
   makeLayout?: (engine: LayoutEngine, options: LayoutOptions) => Layout;
   layoutOptions?: Pick<LayoutOptions, "schedule" | "cancel" | "now" | "frameBudgetMs" | "maxTicksPerFrame">;
@@ -36,7 +38,11 @@ export class GraphLayoutController {
   private failed = false;
   /** True from a new viewport until the layout settles or the reader moves the view. */
   private autoFit = false;
-  constructor(private readonly options: GraphLayoutOptions) {}
+  /** The parameters the next layout starts with: the option, then every later `setParams`. */
+  private params: LayoutParams | undefined;
+  constructor(private readonly options: GraphLayoutOptions) {
+    this.params = options.params;
+  }
 
   /** Attach the mounted renderer, which already shows `graph`, and start loading the engine (once). */
   bind(renderer: LayoutRenderer, graph: GraphData): void {
@@ -84,6 +90,20 @@ export class GraphLayoutController {
     this.layout?.unpin(node.id);
   }
 
+  /** Change engine parameters. A running layout takes them at once and restarts warm; an engine still loading starts with them. */
+  setParams(params: LayoutParams): void {
+    if (this.destroyed) return;
+    this.params = { ...this.params, ...params };
+    const layout = this.layout;
+    if (!layout) return;
+    try {
+      const { ignored } = layout.setParams(params);
+      if (ignored.length) ignoredParams(ignored);
+    } catch (error) {
+      this.fail(error);
+    }
+  }
+
   /** Stop the layout, then forget the renderer, which the caller destroys next. An engine still loading is disposed when it arrives. */
   destroy(): void {
     if (this.destroyed) return;
@@ -105,6 +125,8 @@ export class GraphLayoutController {
       const make = this.options.makeLayout ?? createLayout;
       this.layout = make(engine, {
         ...this.options.layoutOptions,
+        ...(this.params ? { params: this.params } : {}),
+        onIgnoredParams: ignoredParams,
         onPositions: (positions) => {
           const renderer = this.renderer;
           if (this.destroyed || !renderer) return;
@@ -141,4 +163,9 @@ export class GraphLayoutController {
     console.warn("Ontomark graph layout unavailable:", error);
     this.options.onUnavailable?.(LAYOUT_UNAVAILABLE);
   }
+}
+
+/** An engine without a key (an older vowl-wasm, or a mistyped name) keeps its default for it: worth a warning, not a failure. */
+function ignoredParams(keys: string[]): void {
+  console.warn("Ontomark graph layout ignored parameters:", keys.join(", "));
 }
