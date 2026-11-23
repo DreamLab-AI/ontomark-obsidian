@@ -8,7 +8,7 @@ import { OntomarkClient, OntomarkError, isQuiet } from "./client";
 import { isExcluded, parseIgnoreFilters } from "./excludes";
 import type { IgnoreFilter } from "./excludes";
 import type { EntityKind, PatchProposal, WorkerLike } from "./protocol";
-import { DEFAULT_SETTINGS, OntomarkSettingTab, normaliseSettings } from "./settings";
+import { DEFAULT_SETTINGS, OntomarkSettingTab, graphLayoutParams, normaliseSettings } from "./settings";
 import type { OntomarkSettings } from "./settings";
 import { ENTITY_VIEW, EntityView } from "./views/entity-view";
 import { QUERY_VIEW, QueryView } from "./views/query-view";
@@ -233,6 +233,14 @@ export default class OntomarkPlugin extends Plugin {
     const message = err instanceof Error ? err.message : String(err);
     const code = err instanceof OntomarkError ? `${err.code}: ` : "";
     new Notice(`Ontomark: ${code}${message}`);
+  }
+
+  /** Push the graph layout settings to every open graph view; each restarts its layout warm. */
+  applyGraphLayout(): void {
+    const params = graphLayoutParams(this.settings);
+    for (const leaf of this.app.workspace.getLeavesOfType(GRAPH_VIEW)) {
+      if (leaf.view instanceof GraphView) leaf.view.setLayoutParams(params);
+    }
   }
 
   async openEntityView(): Promise<void> {

@@ -343,3 +343,73 @@ describe("graph layout controller", () => {
     expect(r.rend.state.fits).toBe(fits);
   });
 });
+
+describe("graph layout parameters", () => {
+  /** The rig's fake engine with `setParams`, recording each call. */
+  function tunable(params?: Record<string, number>) {
+    const clock = manualClock();
+    const eng = fakeEngine();
+    const calls: Record<string, number>[] = [];
+    const engine: LayoutEngine = { ...eng.engine, setParams: (p) => (calls.push({ ...p }), { applied: Object.keys(p), ignored: [] }) };
+    const rend = fakeRenderer();
+    const unavailable: string[] = [];
+    const controller = new GraphLayoutController({ loadEngine: async () => engine, onUnavailable: (m) => unavailable.push(m), layoutOptions: clock.layoutOptions, ...(params ? { params } : {}) });
+    const start = (graph: GraphData) => {
+      rend.renderer.setGraph(graph);
+      controller.bind(rend.renderer, graph);
+    };
+    return { clock, eng, calls, rend, unavailable, controller, start };
+  }
+
+  it("starts the engine with the params option merged with changes made while it loaded", async () => {
+    const r = tunable({ collideRadius: 21, componentGravity: 0.1 });
+    r.start(ring(6));
+    r.controller.setParams({ collideRadius: 14 });
+    await flush();
+    expect(r.calls).toEqual([{ collideRadius: 14, componentGravity: 0.1 }]);
+    r.clock.frames();
+    expect(r.eng.state.loads).toHaveLength(1);
+  });
+
+  it("without the option sets no parameter at all", async () => {
+    const r = tunable();
+    r.start(ring(6));
+    await flush();
+    r.clock.frames();
+    expect(r.calls).toEqual([]);
+  });
+
+  it("passes a live change to the running layout, which restarts warm without reloading", async () => {
+    const r = tunable({ collideRadius: 21 });
+    r.start(ring(6));
+    await flush();
+    r.clock.frames();
+    const positions = r.rend.state.positions;
+    r.controller.setParams({ collideRadius: 0 });
+    expect(r.calls.at(-1)).toEqual({ collideRadius: 0 });
+    r.clock.frames();
+    expect(r.eng.state.loads).toHaveLength(1);
+    expect(r.rend.state.positions).toBeGreaterThan(positions);
+    expect(r.unavailable).toEqual([]);
+  });
+
+  it("warns about parameters an engine cannot apply and keeps laying out", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const clock = manualClock();
+      const eng = fakeEngine(); // no setParams: every key is ignored
+      const rend = fakeRenderer();
+      const unavailable: string[] = [];
+      const controller = new GraphLayoutController({ loadEngine: async () => eng.engine, onUnavailable: (m) => unavailable.push(m), layoutOptions: clock.layoutOptions, params: { collideRadius: 21 } });
+      rend.renderer.setGraph(ring(4));
+      controller.bind(rend.renderer, ring(4));
+      await flush();
+      clock.frames();
+      expect(warn).toHaveBeenCalledWith("Ontomark graph layout ignored parameters:", "collideRadius");
+      expect(rend.state.positions).toBeGreaterThan(0);
+      expect(unavailable).toEqual([]);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+});
